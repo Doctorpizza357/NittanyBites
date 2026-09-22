@@ -63,7 +63,31 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...
 5. In Firebase → Authentication → Settings → **Authorized domains**, add `username.github.io`.
 6. Push to `main`. The workflow in `.github/workflows/deploy.yml` builds and deploys automatically.
 
-## Importing your existing data
+## Single-owner model
+
+This is a personal rating site. **Only you** (the owner) can sign in and add or
+edit ratings; everyone else is a read-only viewer with no account needed.
+
+1. Sign in once with the account you'll own the site with.
+2. Find your uid: Firebase Console → Authentication → Users → your row → **User UID**.
+3. Set it locally in `.env.local` as `NEXT_PUBLIC_OWNER_UID=<your-uid>`, and as a
+   GitHub Actions **Variable** `NEXT_PUBLIC_OWNER_UID` for the live site.
+4. In `firestore.rules`, replace `OWNER_UID` with your uid, then publish the rules.
+
+Only requests from that uid can write; reads are public.
+
+## Logging with natural language (JSON import)
+
+While signed in as the owner, click **Import**. The modal gives you:
+- **Copy prompt** — paste it into any LLM (ChatGPT, Claude, Gemini…), then
+  describe your meal in plain English.
+- **Copy JSON schema** — the formal draft-07 schema if your tool wants it.
+
+Paste the JSON the LLM returns back into the modal and hit **Import**. It
+validates the payload and appends it to your ratings. The contract lives in
+`lib/importSchema.ts` (`ImportPayload`, `JSON_SCHEMA`, `LLM_PROMPT`).
+
+## Importing your existing data (CLI)
 
 A one-time Admin-SDK script writes the bundled seed history into your account.
 

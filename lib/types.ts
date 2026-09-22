@@ -30,6 +30,7 @@ export type DishCategory =
   | string;
 
 export interface MealLog {
+  id?: string; // Firestore doc id (present when loaded from Firestore)
   date: string;
   day: string;
   meal: string;
@@ -41,6 +42,7 @@ export interface MealLog {
 }
 
 export interface DishRating {
+  id?: string; // Firestore doc id (present when loaded from Firestore)
   date: string;
   meal: string;
   dish: string;

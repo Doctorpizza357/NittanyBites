@@ -82,13 +82,19 @@ export function TrendChart({ meals }: { meals: MealLog[] }) {
               content={<MinimalTooltip />}
               cursor={{ stroke: "#3f3f46", strokeWidth: 1 }}
             />
+            <defs>
+              <linearGradient id="trend-stroke" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#60a5fa" />
+                <stop offset="100%" stopColor="#818cf8" />
+              </linearGradient>
+            </defs>
             <Line
               type="monotone"
               dataKey="rating"
-              stroke="#e4e4e7"
-              strokeWidth={1.5}
-              dot={{ r: 3, fill: "#e4e4e7", strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: "#fafafa", strokeWidth: 0 }}
+              stroke="url(#trend-stroke)"
+              strokeWidth={2}
+              dot={{ r: 3, fill: "#818cf8", strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: "#a5b4fc", strokeWidth: 0 }}
             />
           </LineChart>
         </ResponsiveContainer>

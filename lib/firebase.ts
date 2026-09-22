@@ -18,6 +18,18 @@ export const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+/**
+ * The single owner of this site. Only this user may sign in and write ratings;
+ * everyone else is a read-only viewer. Set NEXT_PUBLIC_OWNER_UID to your
+ * Firebase Auth uid (Console → Authentication → your user → User UID).
+ */
+export const OWNER_UID = process.env.NEXT_PUBLIC_OWNER_UID ?? "";
+
+/** True if the given uid is the site owner. */
+export function isOwnerUid(uid: string | null | undefined): boolean {
+  return Boolean(OWNER_UID) && uid === OWNER_UID;
+}
+
 /** True when the minimum required Firebase config is present. */
 export function isFirebaseConfigured(): boolean {
   return Boolean(

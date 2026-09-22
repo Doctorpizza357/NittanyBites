@@ -1,8 +1,6 @@
 import {
   collection,
   getDocs,
-  getDoc,
-  setDoc,
   writeBatch,
   doc,
   query,
@@ -10,25 +8,21 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { getFirebase } from "./firebase";
-import type {
-  MealLog,
-  DishRating,
-  LogMealPayload,
-  UserProfile,
-} from "./types";
-import { getDayOfWeek, round1 } from "./utils";
+import type { MealLog, DishRating, LogMealPayload } from "./types";
+import type { ImportMeal } from "./importSchema";
+import { getDayOfWeek } from "./utils";
 
 const MEALS_COLLECTION = "meals";
 const DISHES_COLLECTION = "dishes";
-const USERS_COLLECTION = "users";
 
 export interface FirestoreData {
   meals: MealLog[];
   dishes: DishRating[];
 }
 
-function mapMeal(data: Record<string, unknown>): MealLog {
+function mapMeal(id: string, data: Record<string, unknown>): MealLog {
   return {
+    id,
     date: String(data.date ?? ""),
     day: String(data.day ?? ""),
     meal: String(data.meal ?? ""),
@@ -40,8 +34,9 @@ function mapMeal(data: Record<string, unknown>): MealLog {
   };
 }
 
-function mapDish(data: Record<string, unknown>): DishRating {
+function mapDish(id: string, data: Record<string, unknown>): DishRating {
   return {
+    id,
     date: String(data.date ?? ""),
     meal: String(data.meal ?? ""),
     dish: String(data.dish ?? ""),
@@ -53,13 +48,13 @@ function mapDish(data: Record<string, unknown>): DishRating {
   };
 }
 
-/** Read meals + dishes owned by a specific user. */
+/** Read all meals + dishes owned by `uid` (the site owner). */
 export async function fetchUserData(uid: string): Promise<FirestoreData> {
   const fb = getFirebase();
   if (!fb) throw new Error("Firebase not configured");
 
-  // Note: we intentionally filter by ownerUid only (no orderBy) so this works
-  // WITHOUT a Firestore composite index. Sorting is done client-side below.
+  // Filter by ownerUid only (no orderBy) so no composite index is needed;
+  // sorting is done client-side.
   const [mealSnap, dishSnap] = await Promise.all([
     getDocs(
       query(collection(fb.db, MEALS_COLLECTION), where("ownerUid", "==", uid))
@@ -73,9 +68,50 @@ export async function fetchUserData(uid: string): Promise<FirestoreData> {
     a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
 
   return {
-    meals: mealSnap.docs.map((d) => mapMeal(d.data())).sort(byDateAsc),
-    dishes: dishSnap.docs.map((d) => mapDish(d.data())).sort(byDateAsc),
+    meals: mealSnap.docs.map((d) => mapMeal(d.id, d.data())).sort(byDateAsc),
+    dishes: dishSnap.docs.map((d) => mapDish(d.id, d.data())).sort(byDateAsc),
   };
+}
+
+/**
+ * Delete a meal and all dishes that belong to it (matched by date + meal),
+ * scoped to the owner. Requires the owner uid for the dish query filter.
+ */
+export async function deleteMeal(
+  uid: string,
+  meal: { id?: string; date: string; meal: string }
+): Promise<void> {
+  const fb = getFirebase();
+  if (!fb) throw new Error("Firebase not configured");
+
+  const batch = writeBatch(fb.db);
+
+  if (meal.id) {
+    batch.delete(doc(fb.db, MEALS_COLLECTION, meal.id));
+  }
+
+  // Remove dishes tied to this meal (same owner, date, and meal label).
+  // Query by ownerUid only (no composite index), then match client-side.
+  const dishSnap = await getDocs(
+    query(collection(fb.db, DISHES_COLLECTION), where("ownerUid", "==", uid))
+  );
+  dishSnap.docs
+    .filter((d) => {
+      const data = d.data();
+      return data.date === meal.date && data.meal === meal.meal;
+    })
+    .forEach((d) => batch.delete(d.ref));
+
+  await batch.commit();
+}
+
+/** Delete a single dish by its doc id. */
+export async function deleteDish(dishId: string): Promise<void> {
+  const fb = getFirebase();
+  if (!fb) throw new Error("Firebase not configured");
+  const batch = writeBatch(fb.db);
+  batch.delete(doc(fb.db, DISHES_COLLECTION, dishId));
+  await batch.commit();
 }
 
 /** Append one meal + N dishes owned by `uid` in a single batch. */
@@ -124,164 +160,67 @@ export async function addMealToFirestore(
   await batch.commit();
 }
 
-/** Seed a user's account with the initial historical data (first run). */
-export async function seedUserData(
+/** Import many meals (+ their dishes) at once from a validated JSON payload. */
+export async function importMeals(
   uid: string,
-  meals: MealLog[],
-  dishes: DishRating[]
-): Promise<void> {
+  meals: ImportMeal[]
+): Promise<{ meals: number; dishes: number }> {
   const fb = getFirebase();
   if (!fb) throw new Error("Firebase not configured");
 
-  const batch = writeBatch(fb.db);
-  for (const m of meals) {
-    const ref = doc(collection(fb.db, MEALS_COLLECTION));
-    batch.set(ref, { ...m, ownerUid: uid, createdAt: serverTimestamp() });
-  }
-  for (const d of dishes) {
-    const ref = doc(collection(fb.db, DISHES_COLLECTION));
-    batch.set(ref, { ...d, ownerUid: uid, createdAt: serverTimestamp() });
-  }
-  await batch.commit();
-}
+  let mealCount = 0;
+  let dishCount = 0;
 
-/* ---------- user profiles / directory ---------- */
-
-function mapProfile(data: Record<string, unknown>): UserProfile {
-  return {
-    uid: String(data.uid ?? ""),
-    displayName: String(data.displayName ?? ""),
-    email: String(data.email ?? ""),
-    photoURL: String(data.photoURL ?? ""),
-    mealCount: Number(data.mealCount ?? 0),
-    avgRating: Number(data.avgRating ?? 0),
-    updatedAt: typeof data.updatedAt === "number" ? (data.updatedAt as number) : undefined,
+  // Chunk writes to stay under the 500-op Firestore batch limit.
+  let batch = writeBatch(fb.db);
+  let count = 0;
+  const flush = async () => {
+    if (count > 0) {
+      await batch.commit();
+      batch = writeBatch(fb.db);
+      count = 0;
+    }
   };
-}
 
-/**
- * Create or update a user's public profile. Called on sign-in and after
- * logging a meal so the directory stays current.
- */
-export async function upsertUserProfile(profile: {
-  uid: string;
-  displayName: string;
-  email: string;
-  photoURL: string;
-  mealCount: number;
-  avgRating: number;
-}): Promise<void> {
-  const fb = getFirebase();
-  if (!fb) throw new Error("Firebase not configured");
-
-  await setDoc(
-    doc(fb.db, USERS_COLLECTION, profile.uid),
-    { ...profile, updatedAt: Date.now() },
-    { merge: true }
-  );
-}
-
-/** Recompute a user's meal count + average and persist it to their profile. */
-export async function refreshProfileStats(
-  uid: string,
-  displayName: string,
-  email: string,
-  photoURL: string
-): Promise<void> {
-  const { meals } = await fetchUserData(uid);
-  const mealCount = meals.length;
-  const avgRating =
-    mealCount > 0
-      ? round1(meals.reduce((a, m) => a + m.rating, 0) / mealCount)
-      : 0;
-  await upsertUserProfile({
-    uid,
-    displayName,
-    email,
-    photoURL,
-    mealCount,
-    avgRating,
-  });
-}
-
-/** Fetch a single public profile by uid. */
-export async function fetchUserProfile(
-  uid: string
-): Promise<UserProfile | null> {
-  const fb = getFirebase();
-  if (!fb) throw new Error("Firebase not configured");
-  const snap = await getDoc(doc(fb.db, USERS_COLLECTION, uid));
-  if (!snap.exists()) return null;
-  return mapProfile(snap.data());
-}
-
-/** List all public profiles for the people directory. */
-export async function fetchAllProfiles(): Promise<UserProfile[]> {
-  const fb = getFirebase();
-  if (!fb) throw new Error("Firebase not configured");
-  const snap = await getDocs(collection(fb.db, USERS_COLLECTION));
-  return snap.docs.map((d) => mapProfile(d.data()));
-}
-
-/**
- * Build the diner directory from ACTUAL meal data (source of truth), enriched
- * with profile info where available. This guarantees anyone who has logged
- * meals appears — even if their `users/{uid}` profile doc is missing or stale.
- */
-export async function fetchDiners(): Promise<UserProfile[]> {
-  const fb = getFirebase();
-  if (!fb) throw new Error("Firebase not configured");
-
-  const [mealSnap, profileSnap] = await Promise.all([
-    getDocs(collection(fb.db, MEALS_COLLECTION)),
-    getDocs(collection(fb.db, USERS_COLLECTION)),
-  ]);
-
-  const profiles = new Map<string, UserProfile>();
-  profileSnap.docs.forEach((d) => {
-    const p = mapProfile({ ...d.data(), uid: d.data().uid ?? d.id });
-    if (p.uid) profiles.set(p.uid, p);
-  });
-
-  // Aggregate meal stats per owner.
-  const agg = new Map<string, { sum: number; count: number }>();
-  mealSnap.docs.forEach((d) => {
-    const owner = d.data().ownerUid;
-    if (!owner) return;
-    const key = String(owner);
-    const cur = agg.get(key) ?? { sum: 0, count: 0 };
-    cur.sum += Number(d.data().rating ?? 0);
-    cur.count += 1;
-    agg.set(key, cur);
-  });
-
-  // Union of everyone who has a profile OR has meals.
-  const uids = new Set<string>([...profiles.keys(), ...agg.keys()]);
-
-  const diners: UserProfile[] = [];
-  for (const uid of uids) {
-    const profile = profiles.get(uid);
-    const stats = agg.get(uid);
-    const mealCount = stats?.count ?? profile?.mealCount ?? 0;
-    const avgRating = stats
-      ? round1(stats.sum / stats.count)
-      : profile?.avgRating ?? 0;
-
-    const name =
-      profile?.displayName ||
-      (profile?.email ? profile.email.replace(/@.*/, "") : "") ||
-      "Anonymous Diner";
-
-    diners.push({
-      uid,
-      displayName: name,
-      email: profile?.email ?? "",
-      photoURL: profile?.photoURL ?? "",
-      mealCount,
-      avgRating,
-      updatedAt: profile?.updatedAt,
+  for (const m of meals) {
+    const day = getDayOfWeek(m.date) || "";
+    const mealRef = doc(collection(fb.db, MEALS_COLLECTION));
+    batch.set(mealRef, {
+      ownerUid: uid,
+      date: m.date,
+      day,
+      meal: m.meal,
+      location: m.location,
+      rating: m.rating,
+      favorites: m.favorites ?? [],
+      dislikes: m.dislikes ?? [],
+      notes: m.notes ?? "",
+      createdAt: serverTimestamp(),
     });
-  }
+    mealCount += 1;
+    count += 1;
 
-  return diners;
+    for (const d of m.dishes ?? []) {
+      const dishRef = doc(collection(fb.db, DISHES_COLLECTION));
+      batch.set(dishRef, {
+        ownerUid: uid,
+        date: m.date,
+        meal: m.meal,
+        dish: d.dish,
+        location: m.location,
+        category: d.category,
+        rating: d.rating,
+        sentiment: d.sentiment,
+        notes: d.notes ?? "",
+        createdAt: serverTimestamp(),
+      });
+      dishCount += 1;
+      count += 1;
+      if (count >= 400) await flush();
+    }
+    if (count >= 400) await flush();
+  }
+  await flush();
+
+  return { meals: mealCount, dishes: dishCount };
 }

@@ -17,12 +17,6 @@ import {
   type User,
 } from "firebase/auth";
 import { getFirebase, googleProvider, isFirebaseConfigured } from "@/lib/firebase";
-import { upsertUserProfile, fetchUserProfile } from "@/lib/firestore";
-import { bestDisplayName } from "@/lib/utils";
-
-function deriveName(u: User): string {
-  return bestDisplayName({ displayName: u.displayName, email: u.email });
-}
 
 interface AuthContextValue {
   user: User | null;
@@ -53,25 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    const unsub = onAuthStateChanged(fb.auth, async (u) => {
+    const unsub = onAuthStateChanged(fb.auth, (u) => {
       setUser(u);
       setLoading(false);
-      if (u) {
-        // Ensure a public profile exists (preserve existing stats via merge).
-        try {
-          const existing = await fetchUserProfile(u.uid);
-          await upsertUserProfile({
-            uid: u.uid,
-            displayName: deriveName(u),
-            email: u.email ?? "",
-            photoURL: u.photoURL ?? "",
-            mealCount: existing?.mealCount ?? 0,
-            avgRating: existing?.avgRating ?? 0,
-          });
-        } catch {
-          // Non-fatal: directory entry can be created later on first log.
-        }
-      }
     });
     return () => unsub();
   }, []);

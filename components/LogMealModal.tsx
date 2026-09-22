@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useMeals } from "@/lib/useMeals";
 import { isFirebaseConfigured } from "@/lib/firebase";
-import { addMealToFirestore, refreshProfileStats } from "@/lib/firestore";
+import { addMealToFirestore } from "@/lib/firestore";
 import { useAuth } from "./AuthProvider";
 import { useToast } from "./Toast";
 import type {
@@ -67,7 +67,7 @@ interface Props {
 
 export function LogMealModal({ open, onClose }: Props) {
   const { user } = useAuth();
-  const { mutate } = useMeals(user?.uid ?? null);
+  const { mutate } = useMeals();
   const { toast } = useToast();
 
   const [step, setStep] = useState(0);
@@ -179,14 +179,7 @@ export function LogMealModal({ open, onClose }: Props) {
       if (!user) throw new Error("You must be signed in to log a meal.");
       await addMealToFirestore(user.uid, payload);
       await mutate();
-      // Keep the public directory profile stats up to date (non-fatal).
-      refreshProfileStats(
-        user.uid,
-        user.displayName || (user.email ?? "").replace(/@.*/, "") || "Diner",
-        user.email ?? "",
-        user.photoURL ?? ""
-      ).catch(() => {});
-      toast("Meal logged and synced to your dashboard!", "success");
+      toast("Meal logged!", "success");
       close();
     } catch (err) {
       toast(

@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Trash2, Loader2 } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  List,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import type { MealLog, DishRating } from "@/lib/types";
 import { cn, normalizeCommons, normalizeMeal, scoreAccent } from "@/lib/utils";
 import { useAuth } from "./AuthProvider";
@@ -18,6 +25,7 @@ interface Props {
 
 const LOCATION_FILTERS = ["All", "Waring Commons", "Redifer Commons"];
 const MEAL_FILTERS = ["All", "Lunch", "Dinner"];
+type TimelineView = "calendar" | "list";
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -29,6 +37,21 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function dateValue(dateStr: string): Date {
+  return new Date(`${dateStr}T00:00:00`);
+}
+
+function dateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function mealOrder(meal: string): number {
+  return normalizeMeal(meal) === "Dinner" ? 1 : 0;
+}
+
 export function MealTimeline({ meals, dishes }: Props) {
   const { user } = useAuth();
   const { mutate } = useMeals();
@@ -36,6 +59,12 @@ export function MealTimeline({ meals, dishes }: Props) {
   const isOwner = isOwnerUid(user?.uid);
   const [loc, setLoc] = useState("All");
   const [mealType, setMealType] = useState("All");
+  const [view, setView] = useState<TimelineView>("calendar");
+  const [selectedDate, setSelectedDate] = useState(meals[0]?.date ?? "");
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const initial = meals[0] ? dateValue(meals[0].date) : new Date();
+    return new Date(initial.getFullYear(), initial.getMonth(), 1);
+  });
 
   const handleDelete = async (meal: MealLog) => {
     if (!user) return;
@@ -69,15 +98,75 @@ export function MealTimeline({ meals, dishes }: Props) {
         }
         return true;
       })
-      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+      .sort((a, b) =>
+        a.date === b.date
+          ? mealOrder(a.meal) - mealOrder(b.meal)
+          : a.date < b.date
+            ? 1
+            : -1
+      );
   }, [meals, loc, mealType]);
+
+  const mealsByDate = useMemo(() => {
+    const grouped = new Map<string, MealLog[]>();
+    for (const meal of filtered) {
+      const dayMeals = grouped.get(meal.date) ?? [];
+      dayMeals.push(meal);
+      grouped.set(meal.date, dayMeals);
+    }
+    return grouped;
+  }, [filtered]);
+
+  const activeDate = mealsByDate.has(selectedDate)
+    ? selectedDate
+    : filtered[0]?.date ?? "";
+  const selectedMeals = mealsByDate.get(activeDate) ?? [];
+  const firstWeekday = calendarMonth.getDay();
+  const daysInMonth = new Date(
+    calendarMonth.getFullYear(),
+    calendarMonth.getMonth() + 1,
+    0
+  ).getDate();
+  const calendarDays = Array.from(
+    { length: firstWeekday + daysInMonth },
+    (_, index) => (index < firstWeekday ? null : index - firstWeekday + 1)
+  );
+
+  const moveMonth = (amount: number) => {
+    setCalendarMonth(
+      (current) =>
+        new Date(current.getFullYear(), current.getMonth() + amount, 1)
+    );
+  };
+
+  const chooseDate = (date: string) => {
+    setSelectedDate(date);
+    const selected = dateValue(date);
+    setCalendarMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+  };
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <FilterGroup options={LOCATION_FILTERS} value={loc} onChange={setLoc} />
-        <span className="mx-1 hidden h-4 w-px bg-zinc-800 sm:block" />
-        <FilterGroup options={MEAL_FILTERS} value={mealType} onChange={setMealType} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterGroup options={LOCATION_FILTERS} value={loc} onChange={setLoc} />
+          <span className="mx-1 hidden h-4 w-px bg-zinc-800 sm:block" />
+          <FilterGroup options={MEAL_FILTERS} value={mealType} onChange={setMealType} />
+        </div>
+        <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900/50 p-0.5">
+          <ViewButton
+            active={view === "calendar"}
+            label="Calendar"
+            icon={<CalendarDays className="h-3.5 w-3.5" />}
+            onClick={() => setView("calendar")}
+          />
+          <ViewButton
+            active={view === "list"}
+            label="List"
+            icon={<List className="h-3.5 w-3.5" />}
+            onClick={() => setView("list")}
+          />
+        </div>
       </div>
 
       {filtered.length === 0 ? (
@@ -85,20 +174,168 @@ export function MealTimeline({ meals, dishes }: Props) {
           No meals match these filters.
         </div>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((meal, i) => (
-            <MealEntry
-              key={`${meal.date}-${meal.meal}-${i}`}
-              meal={meal}
-              dishes={dishes}
-              index={i}
-              canDelete={isOwner}
-              onDelete={() => handleDelete(meal)}
-            />
-          ))}
+        <div className="space-y-5">
+          {view === "list" ? (
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-sm font-semibold text-zinc-200">
+                  All reviews
+                </h2>
+                <span className="text-xs text-zinc-600">
+                  {filtered.length} {filtered.length === 1 ? "review" : "reviews"}
+                </span>
+              </div>
+              {filtered.map((meal, index) => (
+                <MealEntry
+                  key={`${meal.date}-${meal.meal}-${index}`}
+                  meal={meal}
+                  dishes={dishes}
+                  index={index}
+                  canDelete={isOwner}
+                  onDelete={() => handleDelete(meal)}
+                />
+              ))}
+            </div>
+          ) : (
+            <>
+          <section className="surface overflow-hidden p-4 sm:p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-zinc-100">
+                  {calendarMonth.toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </h2>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  Select a date to see its meal reviews
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => moveMonth(-1)}
+                  title="Previous month"
+                  className="rounded-md p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => moveMonth(1)}
+                  title="Next month"
+                  className="rounded-md p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 text-center text-[0.65rem] font-medium uppercase tracking-wide text-zinc-600">
+              {[
+                "Sun",
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri",
+                "Sat",
+              ].map((day) => (
+                <span key={day} className="py-1">
+                  {day}
+                </span>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((day, index) => {
+                if (!day) return <span key={`empty-${index}`} className="min-h-12" />;
+                const date = dateKey(
+                  new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day)
+                );
+                const dayMeals = mealsByDate.get(date) ?? [];
+                const isSelected = date === activeDate;
+                return (
+                  <button
+                    key={date}
+                    onClick={() => dayMeals.length > 0 && chooseDate(date)}
+                    disabled={dayMeals.length === 0}
+                    className={cn(
+                      "flex min-h-12 flex-col items-center justify-start rounded-lg border p-1.5 text-xs transition-colors sm:min-h-14",
+                      isSelected
+                        ? "border-blue-400/70 bg-blue-500/15 text-blue-200"
+                        : dayMeals.length > 0
+                          ? "border-zinc-800 bg-zinc-950/50 text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800/70"
+                          : "border-transparent text-zinc-700"
+                    )}
+                  >
+                    <span>{day}</span>
+                    {dayMeals.length > 0 && (
+                      <span className="mt-1 flex gap-0.5">
+                        {dayMeals.map((meal) => (
+                          <span
+                            key={`${meal.date}-${meal.meal}`}
+                            className={cn(
+                              "h-1 w-1 rounded-full",
+                              normalizeMeal(meal.meal) === "Dinner"
+                                ? "bg-indigo-400"
+                                : "bg-amber-300"
+                            )}
+                          />
+                        ))}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-zinc-200">
+              {activeDate ? formatDate(activeDate) : "No selected date"}
+            </h2>
+            {selectedMeals.map((meal, index) => (
+              <MealEntry
+                key={`${meal.date}-${meal.meal}-${index}`}
+                meal={meal}
+                dishes={dishes}
+                index={index}
+                canDelete={isOwner}
+                onDelete={() => handleDelete(meal)}
+              />
+            ))}
+          </div>
+            </>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+function ViewButton({
+  active,
+  label,
+  icon,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+        active
+          ? "bg-zinc-800 text-zinc-100"
+          : "text-zinc-500 hover:text-zinc-300"
+      )}
+      aria-pressed={active}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 

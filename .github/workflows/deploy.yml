@@ -30,10 +30,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Compute base path
+        id: basepath
+        shell: bash
+        run: |
+          # For a project site (user.github.io/REPO) the base path is "/REPO".
+          # For a user/org site (repo named user.github.io) it must be empty.
+          REPO="${GITHUB_REPOSITORY#*/}"
+          if [[ "$REPO" == *.github.io ]]; then
+            echo "value=" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=/$REPO" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build (static export)
         env:
-          # Repo-name base path for project sites. Remove for user sites.
-          NEXT_PUBLIC_BASE_PATH: ${{ vars.NEXT_PUBLIC_BASE_PATH }}
+          # Auto-derived from the repo name (overridable via the repo variable).
+          NEXT_PUBLIC_BASE_PATH: ${{ vars.NEXT_PUBLIC_BASE_PATH || steps.basepath.outputs.value }}
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}

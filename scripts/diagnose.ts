@@ -10,6 +10,7 @@
  */
 import { db, getAdmin } from "./admin";
 import { getAuth } from "firebase-admin/auth";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 async function main() {
   const firestore = db();
@@ -29,7 +30,7 @@ async function main() {
 
     const byOwner = new Map<string, number>();
     let missingOwner = 0;
-    snap.forEach((d) => {
+    snap.forEach((d: QueryDocumentSnapshot) => {
       const owner = d.data().ownerUid;
       if (owner === undefined || owner === null || owner === "") {
         missingOwner += 1;

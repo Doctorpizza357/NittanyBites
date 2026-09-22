@@ -10,7 +10,8 @@
     "import-data": "tsx scripts/importData.ts",
     "log-meal": "tsx scripts/logMeal.ts",
     "diagnose": "tsx scripts/diagnose.ts",
-    "migrate-owner": "tsx scripts/migrateOwner.ts"
+    "migrate-owner": "tsx scripts/migrateOwner.ts",
+    "typecheck:scripts": "tsc -p tsconfig.scripts.json"
   },
   "dependencies": {
     "clsx": "^2.1.1",

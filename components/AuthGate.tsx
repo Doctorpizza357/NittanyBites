@@ -27,7 +27,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <DemoBanner />
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</main>
       <footer className="mx-auto max-w-5xl px-4 py-10 text-center text-xs text-zinc-600 sm:px-6">
-        Dining Log · Penn State dining, tracked honestly.
+        Dining Log · Penn State dining
       </footer>
     </>
   );

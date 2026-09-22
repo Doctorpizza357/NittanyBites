@@ -55,7 +55,7 @@ export function Navbar() {
                 Dining Log
               </span>
               <span className="mt-0.5 text-xs text-zinc-500">
-                Penn State · West &amp; South
+                Penn State
               </span>
             </span>
           </Link>

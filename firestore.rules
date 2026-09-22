@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// NittanyBites Firestore Security Rules
+//
+// Model: each user OWNS their meals/dishes (private write), but any signed-in
+// user can READ anyone's data so profiles can be shared and browsed.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Public profiles for the diner directory — readable by ANYONE (no login).
+    match /users/{uid} {
+      allow read: if true;
+      // A user may only create/update their OWN profile document.
+      allow write: if isOwner(uid);
+    }
+
+    // A doc is "unclaimed" if it has no ownerUid yet (legacy/imported data).
+    function unclaimed() {
+      return !("ownerUid" in resource.data)
+        || resource.data.ownerUid == null
+        || resource.data.ownerUid == "";
+    }
+    // Claiming = taking an unclaimed doc and stamping YOUR uid on it.
+    function claimingForSelf() {
+      return signedIn()
+        && unclaimed()
+        && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /meals/{docId} {
+      // Public read (browse meals without logging in).
+      allow read: if true;
+      // Only the owner can create their own docs.
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+      // The owner can modify their docs; anyone may claim an unclaimed doc.
+      allow update: if (signedIn() && resource.data.ownerUid == request.auth.uid)
+        || claimingForSelf();
+      allow delete: if signedIn()
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /dishes/{docId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if (signedIn() && resource.data.ownerUid == request.auth.uid)
+        || claimingForSelf();
+      allow delete: if signedIn()
+        && resource.data.ownerUid == request.auth.uid;
+    }
+  }
+}

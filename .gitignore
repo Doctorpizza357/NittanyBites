@@ -1,0 +1,15 @@
+node_modules
+.next
+/out
+.env.local
+.env
+*.log
+.DS_Store
+next-env.d.ts
+
+# Firebase Admin service-account keys — NEVER commit these
+serviceAccount*.json
+*-service-account*.json
+*firebase-adminsdk*.json
+google-credentials*.json
+*.tsbuildinfo

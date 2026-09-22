@@ -1,0 +1,42 @@
+{
+  "name": "nittanybites",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "import-data": "tsx scripts/importData.ts",
+    "log-meal": "tsx scripts/logMeal.ts",
+    "diagnose": "tsx scripts/diagnose.ts",
+    "migrate-owner": "tsx scripts/migrateOwner.ts"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "firebase": "^12.19.0",
+    "framer-motion": "^11.3.19",
+    "lucide-react": "^0.417.0",
+    "next": "^14.2.33",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7",
+    "swr": "^2.2.5",
+    "tailwind-merge": "^2.4.0"
+  },
+  "devDependencies": {
+    "@google/genai": "^2.23.0",
+    "@types/node": "^20.14.13",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "dotenv": "^18.0.2",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.33",
+    "firebase-admin": "^14.4.0",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "tsx": "^4.23.15",
+    "typescript": "^5.5.4"
+  }
+}

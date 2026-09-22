@@ -23,7 +23,7 @@ export const firebaseConfig = {
  * everyone else is a read-only viewer. Set NEXT_PUBLIC_OWNER_UID to your
  * Firebase Auth uid (Console → Authentication → your user → User UID).
  */
-export const OWNER_UID = process.env.NEXT_PUBLIC_OWNER_UID ?? "";
+export const OWNER_UID = (process.env.NEXT_PUBLIC_OWNER_UID ?? "").trim();
 
 /** True if the given uid is the site owner. */
 export function isOwnerUid(uid: string | null | undefined): boolean {

@@ -13,7 +13,7 @@ service cloud.firestore {
 
     function isOwner() {
       return request.auth != null
-        && request.auth.uid == "OWNER_UID";
+        && request.auth.uid == "jRN9LIiY4QhLgnVSilSpeM5gl922";
     }
 
     match /meals/{docId} {

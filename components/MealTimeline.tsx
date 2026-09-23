@@ -48,6 +48,10 @@ function dateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function todayKey(): string {
+  return dateKey(new Date());
+}
+
 function mealOrder(meal: string): number {
   return normalizeMeal(meal) === "Dinner" ? 1 : 0;
 }
@@ -60,9 +64,9 @@ export function MealTimeline({ meals, dishes }: Props) {
   const [loc, setLoc] = useState("All");
   const [mealType, setMealType] = useState("All");
   const [view, setView] = useState<TimelineView>("calendar");
-  const [selectedDate, setSelectedDate] = useState(meals[0]?.date ?? "");
+  const [selectedDate, setSelectedDate] = useState(todayKey);
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const initial = meals[0] ? dateValue(meals[0].date) : new Date();
+    const initial = new Date();
     return new Date(initial.getFullYear(), initial.getMonth(), 1);
   });
 
@@ -117,9 +121,7 @@ export function MealTimeline({ meals, dishes }: Props) {
     return grouped;
   }, [filtered]);
 
-  const activeDate = mealsByDate.has(selectedDate)
-    ? selectedDate
-    : filtered[0]?.date ?? "";
+  const activeDate = selectedDate;
   const selectedMeals = mealsByDate.get(activeDate) ?? [];
   const firstWeekday = calendarMonth.getDay();
   const daysInMonth = new Date(
@@ -449,7 +451,12 @@ function MealEntry({
             <span key={`${d.dish}-${idx}`}>
               {idx > 0 && <span className="text-zinc-700"> · </span>}
               <span className="text-zinc-300">{d.dish}</span>{" "}
-              <span className="font-mono tabular-nums text-zinc-400">
+              <span
+                className={cn(
+                  "rounded px-1 font-mono tabular-nums",
+                  scoreAccent(d.rating)
+                )}
+              >
                 {d.rating.toFixed(1)}
               </span>
             </span>

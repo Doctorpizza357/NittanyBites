@@ -12,10 +12,14 @@ html {
 }
 
 body {
-  background-color: #09090b; /* zinc-950 */
+  background:
+    radial-gradient(circle at 8% 0%, rgba(30, 64, 175, 0.2), transparent 32rem),
+    radial-gradient(circle at 92% 18%, rgba(8, 145, 178, 0.12), transparent 28rem),
+    #0b1020;
   color: #f4f4f5; /* zinc-100 */
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "tnum", "cv02", "cv03", "cv04";
+  min-height: 100vh;
 }
 
 /* Tabular figures everywhere numbers matter */
@@ -69,7 +73,7 @@ input[type="range"]::-moz-range-thumb {
 @layer components {
   /* Surface card */
   .surface {
-    @apply rounded-xl border border-zinc-800/80 bg-zinc-900/50;
+    @apply rounded-xl border border-blue-950/70 bg-slate-900/75 shadow-lg shadow-blue-950/10;
   }
   /* Text input */
   .field {

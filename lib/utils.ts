@@ -30,10 +30,9 @@ export const tierLabels: Record<Tier, string> = {
 
 /** Color-code a rating pill by score band. */
 export function ratingColor(rating: number): string {
-  if (rating >= 9.0) return "text-amber-300 border-amber-500/40 bg-amber-500/10";
-  if (rating >= 8.5) return "text-sky-300 border-sapphire/40 bg-sapphire/10";
-  if (rating >= 7.0) return "text-emerald-300 border-emerald/40 bg-emerald/10";
-  return "text-rose-300 border-rose/40 bg-rose/10";
+  if (rating >= 8.0) return "text-green-300 border-green-500/50 bg-green-500/10";
+  if (rating >= 5.0) return "text-yellow-300 border-yellow-500/50 bg-yellow-500/10";
+  return "text-red-300 border-red-500/50 bg-red-500/10";
 }
 
 export function sentimentColor(sentiment: string): string {
@@ -97,15 +96,22 @@ export function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-/**
- * Subtle score-based accent for a rating badge. Keeps the zinc base but adds
- * a touch of color: green (great), blue (good), amber (ok), rose (poor).
- */
+/** Map scores to red (bad), yellow (mid), and green (high) ranges. */
 export function scoreAccent(rating: number): string {
-  if (rating >= 9.0) return "border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
-  if (rating >= 8.0) return "border-blue-500/40 bg-blue-500/10 text-blue-300";
-  if (rating >= 7.0) return "border-amber-500/40 bg-amber-500/10 text-amber-300";
-  return "border-rose-500/40 bg-rose-500/10 text-rose-300";
+  const score = Math.min(10, Math.max(1, Math.floor(rating)));
+  const colors = [
+    "border-red-700/50 bg-red-700/10 text-red-300",
+    "border-red-600/50 bg-red-600/10 text-red-300",
+    "border-red-500/50 bg-red-500/10 text-red-300",
+    "border-red-400/50 bg-red-400/10 text-red-300",
+    "border-yellow-600/50 bg-yellow-600/10 text-yellow-300",
+    "border-yellow-500/50 bg-yellow-500/10 text-yellow-300",
+    "border-yellow-400/50 bg-yellow-400/10 text-yellow-300",
+    "border-green-600/50 bg-green-600/10 text-green-300",
+    "border-green-500/50 bg-green-500/10 text-green-300",
+    "border-green-400/50 bg-green-400/10 text-green-300",
+  ];
+  return colors[score - 1];
 }
 
 /** Placeholder names that should never override a real derived name. */

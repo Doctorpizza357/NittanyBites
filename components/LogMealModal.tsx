@@ -14,7 +14,7 @@ import {
   Sparkles,
   ClipboardList,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, scoreAccent } from "@/lib/utils";
 import { useMeals } from "@/lib/useMeals";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { addMealToFirestore } from "@/lib/firestore";
@@ -403,9 +403,7 @@ export function LogMealModal({ open, onClose }: Props) {
                                 }
                                 className="flex-1"
                               />
-                              <span
-                                className="score"
-                              >
+                              <span className={cn("score", scoreAccent(d.rating))}>
                                 {d.rating.toFixed(1)}
                               </span>
                             </div>

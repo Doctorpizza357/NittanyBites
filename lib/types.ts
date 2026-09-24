@@ -61,6 +61,7 @@ export interface MealsApiResponse {
 
 /** Form input shapes used by the Log Meal modal. */
 export interface DishFormInput {
+  id?: string;
   dish: string;
   category: string;
   rating: number;

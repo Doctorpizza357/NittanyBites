@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   X,
@@ -17,13 +17,15 @@ import {
 import { cn, scoreAccent } from "@/lib/utils";
 import { useMeals } from "@/lib/useMeals";
 import { isFirebaseConfigured } from "@/lib/firebase";
-import { addMealToFirestore } from "@/lib/firestore";
+import { addMealToFirestore, updateMealInFirestore } from "@/lib/firestore";
 import { useAuth } from "./AuthProvider";
 import { useToast } from "./Toast";
 import type {
   DishFormInput,
   LogMealPayload,
   MealFormInput,
+  MealLog,
+  DishRating,
   Sentiment,
 } from "@/lib/types";
 
@@ -63,9 +65,10 @@ function emptyDish(): DishFormInput {
 interface Props {
   open: boolean;
   onClose: () => void;
+  editing?: { meal: MealLog; dishes: DishRating[] };
 }
 
-export function LogMealModal({ open, onClose }: Props) {
+export function LogMealModal({ open, onClose, editing }: Props) {
   const { user } = useAuth();
   const { mutate } = useMeals();
   const { toast } = useToast();
@@ -85,6 +88,30 @@ export function LogMealModal({ open, onClose }: Props) {
   const [dishes, setDishes] = useState<DishFormInput[]>([emptyDish()]);
   const [favInput, setFavInput] = useState("");
   const [disInput, setDisInput] = useState("");
+
+  useEffect(() => {
+    if (!open || !editing) return;
+    setStep(0);
+    setMeal({
+      date: editing.meal.date,
+      meal: editing.meal.meal,
+      location: editing.meal.location,
+      rating: editing.meal.rating,
+      favorites: [...editing.meal.favorites],
+      dislikes: [...editing.meal.dislikes],
+      notes: editing.meal.notes,
+    });
+    setDishes(
+      editing.dishes.map((dish) => ({
+        id: dish.id,
+        dish: dish.dish,
+        category: dish.category,
+        rating: dish.rating,
+        sentiment: dish.sentiment as Sentiment,
+        notes: dish.notes,
+      }))
+    );
+  }, [open, editing]);
 
   const resetAll = () => {
     setStep(0);
@@ -177,9 +204,19 @@ export function LogMealModal({ open, onClose }: Props) {
       }
 
       if (!user) throw new Error("You must be signed in to log a meal.");
-      await addMealToFirestore(user.uid, payload);
+      if (editing) {
+        if (!editing.meal.id) throw new Error("This meal cannot be edited.");
+        await updateMealInFirestore(
+          user.uid,
+          editing.meal.id,
+          { date: editing.meal.date, meal: editing.meal.meal },
+          payload
+        );
+      } else {
+        await addMealToFirestore(user.uid, payload);
+      }
       await mutate();
-      toast("Meal logged!", "success");
+      toast(editing ? "Meal updated!" : "Meal logged!", "success");
       close();
     } catch (err) {
       toast(
@@ -212,7 +249,9 @@ export function LogMealModal({ open, onClose }: Props) {
             {/* Header + steps */}
             <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
               <div>
-                <h2 className="text-sm font-semibold text-zinc-100">Log a Meal</h2>
+                <h2 className="text-sm font-semibold text-zinc-100">
+                  {editing ? "Edit Meal" : "Log a Meal"}
+                </h2>
                 <p className="text-xs text-slate-500">
                   Step {step + 1} of {STEPS.length} · {STEPS[step]}
                 </p>
@@ -494,7 +533,7 @@ export function LogMealModal({ open, onClose }: Props) {
                   className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-white disabled:opacity-60"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {submitting ? "Logging…" : "Log Meal"}
+                  {submitting ? "Saving…" : editing ? "Save Changes" : "Log Meal"}
                 </button>
               )}
             </div>

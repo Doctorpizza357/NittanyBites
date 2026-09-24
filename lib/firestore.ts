@@ -114,6 +114,81 @@ export async function deleteDish(dishId: string): Promise<void> {
   await batch.commit();
 }
 
+/** Replace a meal and all of its dishes in one batch. */
+export async function updateMealInFirestore(
+  uid: string,
+  mealId: string,
+  original: { date: string; meal: string },
+  payload: LogMealPayload
+): Promise<void> {
+  const fb = getFirebase();
+  if (!fb) throw new Error("Firebase not configured");
+
+  const dishSnap = await getDocs(
+    query(collection(fb.db, DISHES_COLLECTION), where("ownerUid", "==", uid))
+  );
+  const batch = writeBatch(fb.db);
+  dishSnap.docs
+    .filter((d) => {
+      const data = d.data();
+      return data.date === original.date && data.meal === original.meal;
+    })
+    .forEach((d) => batch.delete(d.ref));
+
+  const { mealLog, dishes } = payload;
+  batch.set(doc(fb.db, MEALS_COLLECTION, mealId), {
+    ownerUid: uid,
+    date: mealLog.date,
+    day: getDayOfWeek(mealLog.date) || "",
+    meal: mealLog.meal,
+    location: mealLog.location,
+    rating: mealLog.rating,
+    favorites: mealLog.favorites ?? [],
+    dislikes: mealLog.dislikes ?? [],
+    notes: mealLog.notes ?? "",
+  });
+
+  for (const dish of dishes) {
+    const dishRef = doc(collection(fb.db, DISHES_COLLECTION));
+    batch.set(dishRef, {
+      ownerUid: uid,
+      date: mealLog.date,
+      meal: mealLog.meal,
+      dish: dish.dish,
+      location: mealLog.location,
+      category: dish.category,
+      rating: dish.rating,
+      sentiment: dish.sentiment,
+      notes: dish.notes ?? "",
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  await batch.commit();
+}
+
+/** Update one dish ranking. */
+export async function updateDish(
+  dishId: string,
+  dish: Omit<import("./types").DishFormInput, "id">
+): Promise<void> {
+  const fb = getFirebase();
+  if (!fb) throw new Error("Firebase not configured");
+  const batch = writeBatch(fb.db);
+  batch.set(
+    doc(fb.db, DISHES_COLLECTION, dishId),
+    {
+      dish: dish.dish,
+      category: dish.category,
+      rating: dish.rating,
+      sentiment: dish.sentiment,
+      notes: dish.notes ?? "",
+    },
+    { merge: true }
+  );
+  await batch.commit();
+}
+
 /** Append one meal + N dishes owned by `uid` in a single batch. */
 export async function addMealToFirestore(
   uid: string,

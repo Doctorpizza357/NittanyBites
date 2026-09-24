@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Edit2,
   List,
   Trash2,
   Loader2,
@@ -17,6 +18,7 @@ import { useMeals } from "@/lib/useMeals";
 import { useToast } from "./Toast";
 import { isOwnerUid } from "@/lib/firebase";
 import { deleteMeal } from "@/lib/firestore";
+import { LogMealModal } from "./LogMealModal";
 
 interface Props {
   meals: MealLog[];
@@ -69,6 +71,7 @@ export function MealTimeline({ meals, dishes }: Props) {
     const initial = new Date();
     return new Date(initial.getFullYear(), initial.getMonth(), 1);
   });
+  const [editing, setEditing] = useState<MealLog | null>(null);
 
   const handleDelete = async (meal: MealLog) => {
     if (!user) return;
@@ -195,6 +198,7 @@ export function MealTimeline({ meals, dishes }: Props) {
                   index={index}
                   canDelete={isOwner}
                   onDelete={() => handleDelete(meal)}
+                  onEdit={() => setEditing(meal)}
                 />
               ))}
             </div>
@@ -302,12 +306,25 @@ export function MealTimeline({ meals, dishes }: Props) {
                 index={index}
                 canDelete={isOwner}
                 onDelete={() => handleDelete(meal)}
+                onEdit={() => setEditing(meal)}
               />
             ))}
           </div>
             </>
           )}
         </div>
+      )}
+      {isOwner && editing && (
+        <LogMealModal
+          open={Boolean(editing)}
+          onClose={() => setEditing(null)}
+          editing={{
+            meal: editing,
+            dishes: dishes.filter(
+              (dish) => dish.date === editing.date && dish.meal === editing.meal
+            ),
+          }}
+        />
       )}
     </div>
   );
@@ -376,12 +393,14 @@ function MealEntry({
   index,
   canDelete,
   onDelete,
+  onEdit,
 }: {
   meal: MealLog;
   dishes: DishRating[];
   index: number;
   canDelete: boolean;
   onDelete: () => void | Promise<void>;
+  onEdit: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
 
@@ -417,18 +436,19 @@ function MealEntry({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {canDelete && (
-            <button
-              onClick={runDelete}
-              disabled={deleting}
-              title="Delete meal"
-              className="rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-rose-500/10 hover:text-rose-400 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
-            >
-              {deleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </button>
+            <>
+              <button onClick={onEdit} title="Edit meal" className="rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-zinc-800 hover:text-zinc-200 sm:opacity-0 sm:group-hover:opacity-100">
+                <Edit2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={runDelete}
+                disabled={deleting}
+                title="Delete meal"
+                className="rounded-md p-1.5 text-zinc-600 transition-colors hover:bg-rose-500/10 hover:text-rose-400 disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              </button>
+            </>
           )}
           <span
             className={cn(

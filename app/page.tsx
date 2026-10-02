@@ -23,7 +23,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Public header */}
       <div className="flex flex-col items-center text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 sm:text-3xl">
           Nittany <span className="text-blue-400">Bites</span>
@@ -42,7 +41,6 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* View tabs */}
       <div className="flex justify-center">
         <div className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1">
           {TABS.map((t) => (

@@ -25,7 +25,6 @@ interface Props {
   dishes: DishRating[];
 }
 
-const LOCATION_FILTERS = ["All", "Waring Commons", "Redifer Commons"];
 const MEAL_FILTERS = ["All", "Lunch", "Dinner"];
 type TimelineView = "calendar" | "list";
 
@@ -72,6 +71,10 @@ export function MealTimeline({ meals, dishes }: Props) {
     return new Date(initial.getFullYear(), initial.getMonth(), 1);
   });
   const [editing, setEditing] = useState<MealLog | null>(null);
+  const locationFilters = useMemo(
+    () => ["All", ...Array.from(new Set(meals.map((meal) => normalizeCommons(meal.location)))).sort()],
+    [meals]
+  );
 
   const handleDelete = async (meal: MealLog) => {
     if (!user) return;
@@ -86,6 +89,7 @@ export function MealTimeline({ meals, dishes }: Props) {
         id: meal.id,
         date: meal.date,
         meal: meal.meal,
+        location: meal.location,
       });
       await mutate();
       toast("Meal deleted.", "success");
@@ -154,9 +158,9 @@ export function MealTimeline({ meals, dishes }: Props) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <FilterGroup options={LOCATION_FILTERS} value={loc} onChange={setLoc} />
+          <FilterGroup label="Filter by location" options={locationFilters} value={loc} onChange={setLoc} />
           <span className="mx-1 hidden h-4 w-px bg-zinc-800 sm:block" />
-          <FilterGroup options={MEAL_FILTERS} value={mealType} onChange={setMealType} />
+          <FilterGroup label="Filter by meal" options={MEAL_FILTERS} value={mealType} onChange={setMealType} />
         </div>
         <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900/50 p-0.5">
           <ViewButton
@@ -220,6 +224,7 @@ export function MealTimeline({ meals, dishes }: Props) {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => moveMonth(-1)}
+                  aria-label="Previous month"
                   title="Previous month"
                   className="rounded-md p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
                 >
@@ -227,6 +232,7 @@ export function MealTimeline({ meals, dishes }: Props) {
                 </button>
                 <button
                   onClick={() => moveMonth(1)}
+                  aria-label="Next month"
                   title="Next month"
                   className="rounded-md p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
                 >
@@ -263,6 +269,8 @@ export function MealTimeline({ meals, dishes }: Props) {
                     key={date}
                     onClick={() => dayMeals.length > 0 && chooseDate(date)}
                     disabled={dayMeals.length === 0}
+                    aria-label={`${formatDate(date)}${dayMeals.length ? `, ${dayMeals.length} ${dayMeals.length === 1 ? "meal" : "meals"}` : ", no meals logged"}`}
+                    aria-pressed={isSelected}
                     className={cn(
                       "flex min-h-12 flex-col items-center justify-start rounded-lg border p-1.5 text-xs transition-colors sm:min-h-14",
                       isSelected
@@ -309,6 +317,9 @@ export function MealTimeline({ meals, dishes }: Props) {
                 onEdit={() => setEditing(meal)}
               />
             ))}
+            {selectedMeals.length === 0 && (
+              <p className="surface p-6 text-center text-sm text-zinc-500">No meals on this date with the selected filters.</p>
+            )}
           </div>
             </>
           )}
@@ -321,7 +332,8 @@ export function MealTimeline({ meals, dishes }: Props) {
           editing={{
             meal: editing,
             dishes: dishes.filter(
-              (dish) => dish.date === editing.date && dish.meal === editing.meal
+              (dish) => Boolean(editing.id && dish.mealId === editing.id) ||
+                (!dish.mealId && dish.date === editing.date && dish.meal === editing.meal && dish.location === editing.location)
             ),
           }}
         />
@@ -344,6 +356,7 @@ function ViewButton({
   return (
     <button
       onClick={onClick}
+      aria-label={label}
       className={cn(
         "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
         active
@@ -359,20 +372,23 @@ function ViewButton({
 }
 
 function FilterGroup({
+  label,
   options,
   value,
   onChange,
 }: {
+  label: string;
   options: string[];
   value: string;
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1" role="group" aria-label={label}>
       {options.map((opt) => (
         <button
           key={opt}
           onClick={() => onChange(opt)}
+          aria-pressed={value === opt}
           className={cn(
             "rounded-full px-3 py-1 text-xs font-medium transition-colors",
             value === opt
@@ -404,9 +420,10 @@ function MealEntry({
 }) {
   const [deleting, setDeleting] = useState(false);
 
-  // Match dishes to this meal by date + meal label.
+  // Match new dishes by meal ID and legacy dishes by date, meal, and location.
   const mealDishes = dishes
-    .filter((d) => d.date === meal.date && d.meal === meal.meal)
+    .filter((d) => Boolean(meal.id && d.mealId === meal.id) ||
+      (!d.mealId && d.date === meal.date && d.meal === meal.meal && d.location === meal.location))
     .sort((a, b) => b.rating - a.rating);
 
   const runDelete = async () => {

@@ -37,6 +37,7 @@ function mapMeal(id: string, data: Record<string, unknown>): MealLog {
 function mapDish(id: string, data: Record<string, unknown>): DishRating {
   return {
     id,
+    mealId: typeof data.mealId === "string" ? data.mealId : undefined,
     date: String(data.date ?? ""),
     meal: String(data.meal ?? ""),
     dish: String(data.dish ?? ""),
@@ -74,12 +75,12 @@ export async function fetchUserData(uid: string): Promise<FirestoreData> {
 }
 
 /**
- * Delete a meal and all dishes that belong to it (matched by date + meal),
- * scoped to the owner. Requires the owner uid for the dish query filter.
+ * Delete a meal and its dishes by meal ID, with a contextual legacy fallback.
+ * The dish query is scoped to the owner.
  */
 export async function deleteMeal(
   uid: string,
-  meal: { id?: string; date: string; meal: string }
+  meal: { id?: string; date: string; meal: string; location: string }
 ): Promise<void> {
   const fb = getFirebase();
   if (!fb) throw new Error("Firebase not configured");
@@ -90,15 +91,15 @@ export async function deleteMeal(
     batch.delete(doc(fb.db, MEALS_COLLECTION, meal.id));
   }
 
-  // Remove dishes tied to this meal (same owner, date, and meal label).
-  // Query by ownerUid only (no composite index), then match client-side.
+  // Query by ownerUid only to avoid a composite index, then match client-side.
   const dishSnap = await getDocs(
     query(collection(fb.db, DISHES_COLLECTION), where("ownerUid", "==", uid))
   );
   dishSnap.docs
     .filter((d) => {
       const data = d.data();
-      return data.date === meal.date && data.meal === meal.meal;
+      return Boolean(meal.id && data.mealId === meal.id) ||
+        (!data.mealId && data.date === meal.date && data.meal === meal.meal && data.location === meal.location);
     })
     .forEach((d) => batch.delete(d.ref));
 
@@ -118,7 +119,7 @@ export async function deleteDish(dishId: string): Promise<void> {
 export async function updateMealInFirestore(
   uid: string,
   mealId: string,
-  original: { date: string; meal: string },
+  original: { date: string; meal: string; location: string },
   payload: LogMealPayload
 ): Promise<void> {
   const fb = getFirebase();
@@ -131,7 +132,8 @@ export async function updateMealInFirestore(
   dishSnap.docs
     .filter((d) => {
       const data = d.data();
-      return data.date === original.date && data.meal === original.meal;
+      return data.mealId === mealId ||
+        (!data.mealId && data.date === original.date && data.meal === original.meal && data.location === original.location);
     })
     .forEach((d) => batch.delete(d.ref));
 
@@ -152,6 +154,7 @@ export async function updateMealInFirestore(
     const dishRef = doc(collection(fb.db, DISHES_COLLECTION));
     batch.set(dishRef, {
       ownerUid: uid,
+      mealId,
       date: mealLog.date,
       meal: mealLog.meal,
       dish: dish.dish,
@@ -220,6 +223,7 @@ export async function addMealToFirestore(
     const dishRef = doc(collection(fb.db, DISHES_COLLECTION));
     batch.set(dishRef, {
       ownerUid: uid,
+      mealId: mealRef.id,
       date: mealLog.date,
       meal: mealLog.meal,
       dish: d.dish,
@@ -279,6 +283,7 @@ export async function importMeals(
       const dishRef = doc(collection(fb.db, DISHES_COLLECTION));
       batch.set(dishRef, {
         ownerUid: uid,
+        mealId: mealRef.id,
         date: m.date,
         meal: m.meal,
         dish: d.dish,

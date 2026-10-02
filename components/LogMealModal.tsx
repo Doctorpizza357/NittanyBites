@@ -14,7 +14,7 @@ import {
   Sparkles,
   ClipboardList,
 } from "lucide-react";
-import { cn, scoreAccent } from "@/lib/utils";
+import { cn, normalizeCommons, scoreAccent } from "@/lib/utils";
 import { useMeals } from "@/lib/useMeals";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { addMealToFirestore, updateMealInFirestore } from "@/lib/firestore";
@@ -55,7 +55,10 @@ const SENTIMENT_OPTIONS: Sentiment[] = [
 const STEPS = ["Meal", "Score", "Dishes", "Summary"] as const;
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function emptyDish(): DishFormInput {
@@ -66,11 +69,13 @@ interface Props {
   open: boolean;
   onClose: () => void;
   editing?: { meal: MealLog; dishes: DishRating[] };
+  draft?: { meal: MealLog; dishes: DishRating[] };
+  onDraftSave?: (payload: LogMealPayload) => void;
 }
 
-export function LogMealModal({ open, onClose, editing }: Props) {
+export function LogMealModal({ open, onClose, editing, draft, onDraftSave }: Props) {
   const { user } = useAuth();
-  const { mutate } = useMeals();
+  const { mutate, meals: historyMeals, dishes: historicalDishes } = useMeals();
   const { toast } = useToast();
 
   const [step, setStep] = useState(0);
@@ -88,21 +93,41 @@ export function LogMealModal({ open, onClose, editing }: Props) {
   const [dishes, setDishes] = useState<DishFormInput[]>([emptyDish()]);
   const [favInput, setFavInput] = useState("");
   const [disInput, setDisInput] = useState("");
+  const recentMeal = useMemo(
+    () => [...historyMeals].sort((a, b) => b.date.localeCompare(a.date))[0],
+    [historyMeals]
+  );
 
   useEffect(() => {
-    if (!open || !editing) return;
+    if (!open) return;
     setStep(0);
+    const source = editing ?? draft;
+    if (!source) {
+      setMeal({
+        date: today(),
+        meal: MEAL_OPTIONS.includes(recentMeal?.meal ?? "") ? recentMeal!.meal : "Dinner",
+        location: recentMeal ? normalizeCommons(recentMeal.location) : "Waring Commons",
+        rating: 8.0,
+        favorites: [],
+        dislikes: [],
+        notes: "",
+      });
+      setDishes([emptyDish()]);
+      setFavInput("");
+      setDisInput("");
+      return;
+    }
     setMeal({
-      date: editing.meal.date,
-      meal: editing.meal.meal,
-      location: editing.meal.location,
-      rating: editing.meal.rating,
-      favorites: [...editing.meal.favorites],
-      dislikes: [...editing.meal.dislikes],
-      notes: editing.meal.notes,
+      date: source.meal.date,
+      meal: source.meal.meal,
+      location: source.meal.location,
+      rating: source.meal.rating,
+      favorites: [...source.meal.favorites],
+      dislikes: [...source.meal.dislikes],
+      notes: source.meal.notes,
     });
     setDishes(
-      editing.dishes.map((dish) => ({
+      source.dishes.map((dish) => ({
         id: dish.id,
         dish: dish.dish,
         category: dish.category,
@@ -111,7 +136,9 @@ export function LogMealModal({ open, onClose, editing }: Props) {
         notes: dish.notes,
       }))
     );
-  }, [open, editing]);
+    setFavInput("");
+    setDisInput("");
+  }, [open, editing, draft, recentMeal]);
 
   const resetAll = () => {
     setStep(0);
@@ -129,8 +156,8 @@ export function LogMealModal({ open, onClose, editing }: Props) {
     setDisInput("");
   };
 
-  const close = () => {
-    if (submitting) return;
+  const close = (afterSave = false) => {
+    if (submitting && !afterSave) return;
     onClose();
     setTimeout(resetAll, 250);
   };
@@ -162,6 +189,11 @@ export function LogMealModal({ open, onClose, editing }: Props) {
     const payload: LogMealPayload = { mealLog: meal, dishes: validDishes };
 
     try {
+      if (onDraftSave) {
+        onDraftSave(payload);
+        close(true);
+        return;
+      }
       if (!isFirebaseConfigured()) {
         // Demo mode: optimistically show it locally without persisting.
         await mutate(
@@ -199,7 +231,7 @@ export function LogMealModal({ open, onClose, editing }: Props) {
           "Logged locally (Demo Mode). Add Firebase config to persist.",
           "info"
         );
-        close();
+        close(true);
         return;
       }
 
@@ -209,7 +241,7 @@ export function LogMealModal({ open, onClose, editing }: Props) {
         await updateMealInFirestore(
           user.uid,
           editing.meal.id,
-          { date: editing.meal.date, meal: editing.meal.meal },
+          { date: editing.meal.date, meal: editing.meal.meal, location: editing.meal.location },
           payload
         );
       } else {
@@ -217,7 +249,7 @@ export function LogMealModal({ open, onClose, editing }: Props) {
       }
       await mutate();
       toast(editing ? "Meal updated!" : "Meal logged!", "success");
-      close();
+      close(true);
     } catch (err) {
       toast(
         err instanceof Error ? err.message : "Failed to log meal.",
@@ -236,7 +268,7 @@ export function LogMealModal({ open, onClose, editing }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={close}
+            onClick={() => close()}
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           />
           <motion.div
@@ -244,12 +276,14 @@ export function LogMealModal({ open, onClose, editing }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-zinc-800 bg-zinc-900 shadow-2xl sm:rounded-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="meal-modal-title"
+            className="relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-zinc-800 bg-zinc-900 shadow-2xl sm:max-h-[92vh] sm:rounded-2xl"
           >
-            {/* Header + steps */}
             <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
               <div>
-                <h2 className="text-sm font-semibold text-zinc-100">
+                <h2 id="meal-modal-title" className="text-sm font-semibold text-zinc-100">
                   {editing ? "Edit Meal" : "Log a Meal"}
                 </h2>
                 <p className="text-xs text-slate-500">
@@ -257,7 +291,9 @@ export function LogMealModal({ open, onClose, editing }: Props) {
                 </p>
               </div>
               <button
-                onClick={close}
+                type="button"
+                onClick={() => close()}
+                aria-label="Close meal form"
                 className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
               >
                 <X className="h-5 w-5" />
@@ -276,7 +312,6 @@ export function LogMealModal({ open, onClose, editing }: Props) {
               ))}
             </div>
 
-            {/* Body */}
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -393,11 +428,19 @@ export function LogMealModal({ open, onClose, editing }: Props) {
                             <input
                               placeholder="Dish name"
                               value={d.dish}
-                              onChange={(e) =>
-                                updateDish(idx, { dish: e.target.value })
-                              }
+                              list={`dish-history-${idx}`}
+                              onChange={(e) => {
+                                const name = e.target.value;
+                                const previous = historicalDishes.find((item) => item.dish.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase());
+                                updateDish(idx, previous
+                                  ? { dish: name, category: previous.category, sentiment: previous.sentiment as Sentiment }
+                                  : { dish: name });
+                              }}
                               className="input"
                             />
+                            <datalist id={`dish-history-${idx}`}>
+                              {Array.from(new Set(historicalDishes.map((item) => item.dish))).map((name) => <option key={name} value={name} />)}
+                            </datalist>
                             <div className="grid grid-cols-2 gap-2">
                               <select
                                 value={d.category}
@@ -508,7 +551,6 @@ export function LogMealModal({ open, onClose, editing }: Props) {
               </AnimatePresence>
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-between gap-3 border-t border-zinc-800 px-5 py-4">
               <button
                 onClick={() => setStep((s) => Math.max(0, s - 1))}
@@ -533,7 +575,7 @@ export function LogMealModal({ open, onClose, editing }: Props) {
                   className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-white disabled:opacity-60"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {submitting ? "Saving…" : editing ? "Save Changes" : "Log Meal"}
+                  {submitting ? "Saving…" : onDraftSave ? "Save edits" : editing ? "Save Changes" : "Log Meal"}
                 </button>
               )}
             </div>
@@ -546,7 +588,7 @@ export function LogMealModal({ open, onClose, editing }: Props) {
               border: 1px solid #27272a;
               background-color: #09090b;
               padding: 0.55rem 0.75rem;
-              font-size: 0.875rem;
+              font-size: 16px;
               color: #f4f4f5;
               outline: none;
             }
@@ -556,6 +598,9 @@ export function LogMealModal({ open, onClose, editing }: Props) {
             .input:focus {
               border-color: #52525b;
               box-shadow: 0 0 0 1px #3f3f46;
+            }
+            @media (min-width: 640px) {
+              .input { font-size: 0.875rem; }
             }
           `}</style>
         </div>

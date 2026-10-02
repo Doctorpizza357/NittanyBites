@@ -130,10 +130,11 @@ Rules:
 
 /**
  * Build an import-compatible payload from stored meals + dishes.
- * Dishes are matched to their meal by date + meal label.
+ * New dishes are matched by meal ID; legacy dishes use date, meal, and location.
  */
 export function buildExportPayload(
   meals: {
+    id?: string;
     date: string;
     meal: string;
     location: string;
@@ -143,8 +144,10 @@ export function buildExportPayload(
     notes?: string;
   }[],
   dishes: {
+    mealId?: string;
     date: string;
     meal: string;
+    location: string;
     dish: string;
     category: string;
     rating: number;
@@ -162,7 +165,8 @@ export function buildExportPayload(
       dislikes: m.dislikes ?? [],
       notes: m.notes ?? "",
       dishes: dishes
-        .filter((d) => d.date === m.date && d.meal === m.meal)
+        .filter((d) => Boolean(m.id && d.mealId === m.id) ||
+          (!d.mealId && d.date === m.date && d.meal === m.meal && d.location === m.location))
         .map((d) => ({
           dish: d.dish,
           category: d.category,

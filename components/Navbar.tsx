@@ -94,7 +94,6 @@ export function Navbar() {
                 </button>
               </>
             ) : configured ? (
-              // Non-owner: subtle owner sign-in (viewers never need this).
               <button
                 onClick={user ? () => signOut() : handleSignIn}
                 className="flex items-center gap-1.5 rounded-lg border border-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"

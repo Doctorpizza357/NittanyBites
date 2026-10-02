@@ -43,6 +43,7 @@ export interface MealLog {
 
 export interface DishRating {
   id?: string; // Firestore doc id (present when loaded from Firestore)
+  mealId?: string;
   date: string;
   meal: string;
   dish: string;

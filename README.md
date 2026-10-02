@@ -51,7 +51,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...
 ### Data model (Firestore)
 
 - `meals/{id}` — `{ date, day, meal, location, rating, favorites[], dislikes[], notes, createdAt }`
-- `dishes/{id}` — `{ date, meal, dish, location, category, rating, sentiment, notes, createdAt }`
+- `dishes/{id}` — `{ mealId?, date, meal, dish, location, category, rating, sentiment, notes, createdAt }`; new records use `mealId` to link to their parent meal, while older records remain readable through a date/meal/location fallback.
 
 ## Deploying to GitHub Pages
 

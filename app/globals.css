@@ -16,7 +16,7 @@ body {
     radial-gradient(circle at 8% 0%, rgba(30, 64, 175, 0.2), transparent 32rem),
     radial-gradient(circle at 92% 18%, rgba(8, 145, 178, 0.12), transparent 28rem),
     #0b1020;
-  color: #f4f4f5; /* zinc-100 */
+  color: #f4f4f5;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "tnum", "cv02", "cv03", "cv04";
   min-height: 100vh;
@@ -27,7 +27,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Minimal scrollbars */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -36,14 +35,13 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a; /* zinc-800 */
+  background: #27272a;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46; /* zinc-700 */
+  background: #3f3f46;
 }
 
-/* Range slider — muted zinc */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -71,15 +69,12 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @layer components {
-  /* Surface card */
   .surface {
     @apply rounded-xl border border-blue-950/70 bg-slate-900/75 shadow-lg shadow-blue-950/10;
   }
-  /* Text input */
   .field {
     @apply w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-700;
   }
-  /* Score badge — neutral, mono */
   .score {
     @apply inline-flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 font-mono text-sm font-medium tabular-nums text-zinc-100;
   }

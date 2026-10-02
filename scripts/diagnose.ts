@@ -15,14 +15,12 @@ import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 async function main() {
   const firestore = db();
 
-  // 1) List Auth users (uid ↔ email).
   console.log("=== Auth users ===");
   const authUsers = await getAuth(getAdmin()).listUsers(50);
   for (const u of authUsers.users) {
     console.log(`  uid=${u.uid}  email=${u.email ?? "(none)"}`);
   }
 
-  // 2) Summarize meals by ownerUid.
   const collections = ["meals", "dishes"] as const;
   for (const name of collections) {
     const snap = await firestore.collection(name).get();
@@ -46,14 +44,12 @@ async function main() {
       console.log(`  ⚠ ${missingOwner} docs have NO ownerUid field`);
     }
 
-    // Show one sample document's fields.
     const first = snap.docs[0];
     if (first) {
       console.log(`  sample fields: ${Object.keys(first.data()).join(", ")}`);
     }
   }
 
-  // 3) If a target is given, count what the UI query would return for them.
   const email = process.env.TARGET_EMAIL;
   const uidEnv = process.env.TARGET_UID;
   if (email || uidEnv) {

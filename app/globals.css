@@ -5,17 +5,18 @@
 :root {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  --color-psu-blue: #1e407c;
+  --color-psu-blue-light: #4f83cc;
+  --color-psu-gold: #f4c445;
 }
 
 html {
   color-scheme: dark;
+  background-color: #0b1020;
 }
 
 body {
-  background:
-    radial-gradient(circle at 8% 0%, rgba(30, 64, 175, 0.2), transparent 32rem),
-    radial-gradient(circle at 92% 18%, rgba(8, 145, 178, 0.12), transparent 28rem),
-    #0b1020;
+  background: #0b1423;
   color: #f4f4f5;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "tnum", "cv02", "cv03", "cv04";
@@ -35,11 +36,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #30425d;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #49617f;
 }
 
 input[type="range"] {
@@ -47,7 +48,7 @@ input[type="range"] {
   appearance: none;
   height: 4px;
   border-radius: 9999px;
-  background: #27272a;
+  background: #30425d;
   outline: none;
 }
 input[type="range"]::-webkit-slider-thumb {
@@ -56,26 +57,45 @@ input[type="range"]::-webkit-slider-thumb {
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background: #f4f4f5;
+  background: var(--color-psu-gold);
   cursor: pointer;
 }
 input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background: #f4f4f5;
+  background: var(--color-psu-gold);
   border: none;
   cursor: pointer;
 }
 
 @layer components {
   .surface {
-    @apply rounded-xl border border-blue-950/70 bg-slate-900/75 shadow-lg shadow-blue-950/10;
+    @apply rounded-xl border shadow-lg;
+    border-color: #2a4263;
+    background-color: #13223a;
+    box-shadow: 0 10px 24px rgba(2, 8, 23, 0.2);
   }
   .field {
-    @apply w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-700;
+    @apply w-full rounded-lg border px-3 py-2 text-sm text-zinc-100 outline-none transition-colors placeholder:text-slate-500 focus:ring-1;
+    border-color: #30425d;
+    background-color: #0b1220;
+  }
+  .field:focus {
+    border-color: var(--color-psu-blue-light);
+    --tw-ring-color: rgba(79, 131, 204, 0.45);
   }
   .score {
-    @apply inline-flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 font-mono text-sm font-medium tabular-nums text-zinc-100;
+    @apply inline-flex items-center justify-center rounded-md border px-2 py-1 font-mono text-sm font-semibold tabular-nums;
+    border-color: rgba(244, 196, 69, 0.3);
+    background-color: rgba(244, 196, 69, 0.1);
+    color: #f8d976;
+  }
+  .button-primary {
+    background-color: var(--color-psu-blue);
+    color: white;
+  }
+  .button-primary:hover {
+    background-color: #294f91;
   }
 }

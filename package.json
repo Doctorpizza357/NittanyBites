@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "import-data": "tsx scripts/importData.ts",
+    "fetch-menu": "tsx scripts/fetchDailyMenu.ts",
     "log-meal": "tsx scripts/logMeal.ts",
     "diagnose": "tsx scripts/diagnose.ts",
     "migrate-owner": "tsx scripts/migrateOwner.ts",

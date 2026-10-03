@@ -97,3 +97,26 @@ export interface UserProfile {
   avgRating: number;
   updatedAt?: number;
 }
+
+export type MenuMeal = "Lunch" | "Dinner";
+export type MenuLocation =
+  | "Findlay"
+  | "Warnock"
+  | "Pollock"
+  | "Redifer"
+  | "Waring";
+
+export interface MenuCategory {
+  name: string;
+  items: {
+    name: string;
+    dietary: string[];
+  }[];
+}
+
+export interface DailyMenuSnapshot {
+  date: string;
+  updatedAt: string;
+  sourceUrl: string;
+  menus: Record<MenuLocation, Record<MenuMeal, MenuCategory[]>>;
+}

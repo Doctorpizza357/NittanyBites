@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "0 12 * * *"
   workflow_dispatch:
 
 permissions:
@@ -29,6 +31,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Fetch today's dining menus
+        run: npm run fetch-menu
 
       - name: Compute base path
         id: basepath

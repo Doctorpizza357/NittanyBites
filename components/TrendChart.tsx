@@ -91,8 +91,8 @@ export function TrendChart({ meals }: { meals: MealLog[] }) {
             {locations.map((option) => <option key={option}>{option}</option>)}
           </select>
         </div>
-        <div className="flex w-full rounded-lg border border-zinc-800 bg-zinc-950/70 p-1" role="group" aria-label="Trend time range">
-          {RANGES.map((option) => <button key={option.label} type="button" aria-pressed={range === option.label} onClick={() => setRange(option.label)} className={`min-h-10 flex-1 rounded-md px-2 text-xs font-medium transition-colors ${range === option.label ? "bg-zinc-800 text-zinc-100" : "text-zinc-500 hover:text-zinc-200"}`}>{option.label}</button>)}
+        <div className="flex w-full rounded-lg border border-slate-700 bg-slate-950/70 p-1" role="group" aria-label="Trend time range">
+          {RANGES.map((option) => <button key={option.label} type="button" aria-pressed={range === option.label} onClick={() => setRange(option.label)} className={`min-h-10 flex-1 rounded-md px-2 text-xs font-medium transition-colors ${range === option.label ? "bg-blue-900/70 text-sky-100" : "text-slate-400 hover:text-white"}`}>{option.label}</button>)}
         </div>
       </div>
       {count === 0 ? <div className="py-14 text-center text-sm text-zinc-500">No meals in this range for the selected location.</div> : <>
@@ -119,19 +119,13 @@ export function TrendChart({ meals }: { meals: MealLog[] }) {
               content={<MinimalTooltip />}
               cursor={{ stroke: "#3f3f46", strokeWidth: 1 }}
             />
-            <defs>
-              <linearGradient id="trend-stroke" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#60a5fa" />
-                <stop offset="100%" stopColor="#818cf8" />
-              </linearGradient>
-            </defs>
             <Line
               type="monotone"
               dataKey="rating"
-              stroke="url(#trend-stroke)"
+              stroke="#6ea8e8"
               strokeWidth={2}
-              dot={{ r: 3, fill: "#818cf8", strokeWidth: 0 }}
-              activeDot={{ r: 5, fill: "#a5b4fc", strokeWidth: 0 }}
+              dot={{ r: 3, fill: "#6ea8e8", strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: "#f4c445", strokeWidth: 0 }}
             />
           </LineChart>
         </ResponsiveContainer>

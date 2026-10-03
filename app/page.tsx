@@ -5,12 +5,13 @@ import { motion } from "framer-motion";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { useMeals } from "@/lib/useMeals";
 import { MealTimeline } from "@/components/MealTimeline";
+import { DailyMenu } from "@/components/DailyMenu";
 import { RankingsList } from "@/components/RankingsList";
 import { TrendChart } from "@/components/TrendChart";
 import { cn, round1 } from "@/lib/utils";
 
-type Tab = "Timeline" | "Rankings" | "Trends";
-const TABS: Tab[] = ["Timeline", "Rankings", "Trends"];
+type Tab = "Timeline" | "Menus" | "Rankings" | "Trends";
+const TABS: Tab[] = ["Timeline", "Menus", "Rankings", "Trends"];
 
 export default function DashboardPage() {
   const { meals, dishes, isLoading, error } = useMeals();
@@ -25,17 +26,18 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-col items-center text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 sm:text-3xl">
-          Nittany <span className="text-blue-400">Bites</span>
+          Nittany <span className="text-sky-300">Bites</span>
         </h1>
         <p className="mt-2 text-sm text-zinc-400">
-          {meals.length} {meals.length === 1 ? "meal" : "meals"} logged
+          <span className="font-medium text-sky-200">{meals.length}</span>{" "}
+          {meals.length === 1 ? "meal" : "meals"} logged
           {meals.length > 0 && (
             <>
-              {" · "}
-              <span className="font-mono tabular-nums text-zinc-200">
+              <span className="mx-2 text-slate-600" aria-hidden="true">·</span>
+              <span className="font-mono font-semibold tabular-nums text-amber-200">
                 {avg.toFixed(1)}
               </span>{" "}
-              average
+              <span className="text-slate-400">average</span>
             </>
           )}
         </p>
@@ -49,13 +51,13 @@ export default function DashboardPage() {
               onClick={() => setTab(t)}
               className={cn(
                 "relative rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
-                tab === t ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                tab === t ? "text-white" : "text-slate-400 hover:text-slate-100"
               )}
             >
               {tab === t && (
                 <motion.span
                   layoutId="tab-active"
-                  className="absolute inset-0 rounded-md bg-gradient-to-br from-blue-500 to-indigo-600"
+                  className="absolute inset-0 rounded-md bg-[var(--color-psu-blue)]"
                   transition={{ type: "spring", stiffness: 400, damping: 32 }}
                 />
               )}
@@ -87,6 +89,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.2 }}
         >
           {tab === "Timeline" && <MealTimeline meals={meals} dishes={dishes} />}
+          {tab === "Menus" && <DailyMenu />}
           {tab === "Rankings" && <RankingsList dishes={dishes} />}
           {tab === "Trends" && <TrendChart meals={meals} />}
         </motion.div>

@@ -217,9 +217,17 @@ export function MealTimeline({ meals, dishes }: Props) {
                     year: "numeric",
                   })}
                 </h2>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Select a date to see its meal reviews
-                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+                  <span>Select a date to see its meal reviews</span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-300" aria-hidden="true" />
+                    Lunch
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-sky-400" aria-hidden="true" />
+                    Dinner
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -274,7 +282,7 @@ export function MealTimeline({ meals, dishes }: Props) {
                     className={cn(
                       "flex min-h-12 flex-col items-center justify-start rounded-lg border p-1.5 text-xs transition-colors sm:min-h-14",
                       isSelected
-                        ? "border-blue-400/70 bg-blue-500/15 text-blue-200"
+                        ? "border-sky-400/60 bg-blue-900/50 text-sky-100"
                         : dayMeals.length > 0
                           ? "border-zinc-800 bg-zinc-950/50 text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800/70"
                           : "border-transparent text-zinc-700"
@@ -289,7 +297,7 @@ export function MealTimeline({ meals, dishes }: Props) {
                             className={cn(
                               "h-1 w-1 rounded-full",
                               normalizeMeal(meal.meal) === "Dinner"
-                                ? "bg-indigo-400"
+                                ? "bg-sky-400"
                                 : "bg-amber-300"
                             )}
                           />
@@ -360,8 +368,8 @@ function ViewButton({
       className={cn(
         "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
         active
-          ? "bg-zinc-800 text-zinc-100"
-          : "text-zinc-500 hover:text-zinc-300"
+          ? "bg-blue-900/70 text-sky-100"
+          : "text-slate-400 hover:text-slate-100"
       )}
       aria-pressed={active}
     >
@@ -392,8 +400,8 @@ function FilterGroup({
           className={cn(
             "rounded-full px-3 py-1 text-xs font-medium transition-colors",
             value === opt
-              ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white"
-              : "border border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+              ? "bg-[var(--color-psu-blue)] text-white"
+              : "border border-slate-700 text-slate-300 hover:border-sky-700 hover:text-white"
           )}
         >
           {opt}

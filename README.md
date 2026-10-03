@@ -1,6 +1,6 @@
 # NittanyBites 🍽️
 
-Penn State Dining Hall Meal Tracker & Analytics Dashboard. A statically-exported Next.js app with **Firebase Authentication** (login) and **Cloud Firestore** (database), designed to be hosted for free on **GitHub Pages**.
+Penn State Dining Hall Meal Tracker & Analytics Dashboard. A statically-exported Next.js app with **Firebase Authentication** (login) and **Cloud Firestore** (database), designed to be hosted for free on **GitHub Pages**. A scheduled GitHub Actions job fetches the daily lunch and dinner menus for the five University Park dining locations directly from Penn State's menu page—no Gemini API required.
 
 ## Stack
 
@@ -16,6 +16,7 @@ Because GitHub Pages only serves static files, there is **no server**. All auth 
 
 - **Login** is gated by Firebase Auth. Signed-out users see a login screen.
 - **Data** lives in Firestore collections `meals` and `dishes`. Reads and writes go directly from the browser, secured by Firestore Security Rules.
+- **Daily menus** are fetched from Penn State during the scheduled GitHub Pages build and published as static JSON alongside the site. The job runs daily at 12:00 UTC (7:00 AM Eastern in standard time, 8:00 AM during daylight time); GitHub may delay scheduled runs.
 - The Firebase web config keys are **public identifiers, not secrets** — they're safe to ship in the bundle. Security is enforced by Auth + Rules.
 - **Demo Mode:** if no Firebase config is present, the app skips login and shows the bundled seed data so you can explore locally.
 
@@ -23,10 +24,12 @@ Because GitHub Pages only serves static files, there is **no server**. All auth 
 
 ```bash
 npm install
+npm run fetch-menu
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). With no `.env.local` values, it runs in Demo Mode.
+Run `npm run fetch-menu` again whenever you want to refresh the local menu snapshot.
 
 ## Firebase Setup
 
@@ -61,7 +64,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=...
    `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`.
 4. For a **project site** (`username.github.io/repo-name`), add a repo **Variable** `NEXT_PUBLIC_BASE_PATH` = `/repo-name`. For a **user site** (`username.github.io`), leave it unset.
 5. In Firebase → Authentication → Settings → **Authorized domains**, add `username.github.io`.
-6. Push to `main`. The workflow in `.github/workflows/deploy.yml` builds and deploys automatically.
+6. Push to `main`. The workflow in `.github/workflows/deploy.yml` fetches today's menus, builds, and deploys automatically. It also runs daily on its schedule.
 
 ## Single-owner model
 
@@ -127,13 +130,13 @@ Function), since GitHub Pages can't run server code. The default model is
 ```
 app/
   layout.tsx           Providers: Toast → Auth → AuthGate
-  page.tsx             Tabbed dashboard: Timeline · Rankings · Trends
+  page.tsx             Tabbed dashboard: Timeline · Menus · Rankings · Trends
   people/page.tsx      Diner directory (search + browse)
   u/page.tsx           Shared read-only profile (?id=<uid>)
 components/            Navbar, AuthProvider, AuthGate, LoginScreen,
-                       MealTimeline, RankingsList, TrendChart,
+                       MealTimeline, DailyMenu, RankingsList, TrendChart,
                        ProfileView, LogMealModal, Toast, DemoBanner
 lib/                   firebase, firestore, useMeals, types, seedData, utils
-scripts/               admin, writeMeals, importData, logMeal (Gemini)
+scripts/               admin, writeMeals, importData, fetchDailyMenu, logMeal (Gemini)
 firestore.rules        Firestore security rules (per-user ownership)
 ```

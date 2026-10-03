@@ -47,12 +47,12 @@ export function Navbar() {
       <header className="sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-psu-blue)]">
               <UtensilsCrossed className="h-4 w-4 text-white" />
             </span>
             <span className="flex flex-col leading-none">
               <span className="text-sm font-semibold tracking-tight text-zinc-100">
-                Dining Log
+                Dining <span className="text-sky-300">Log</span>
               </span>
               <span className="mt-0.5 text-xs text-zinc-500">
                 Penn State
@@ -80,7 +80,7 @@ export function Navbar() {
                 </button>
                 <button
                   onClick={() => setLogOpen(true)}
-                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                  className="button-primary flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Log Meal</span>

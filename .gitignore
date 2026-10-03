@@ -1,6 +1,7 @@
 node_modules
 .next
 /out
+/public/daily-menu.json
 .env.local
 .env
 *.log

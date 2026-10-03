@@ -272,7 +272,7 @@ export function ImportModal({ open, onClose }: Props) {
               <button
                 onClick={handleImport}
                 disabled={busy || !text.trim()}
-                className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 sm:flex-none"
+                className="button-primary flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors disabled:opacity-50 sm:flex-none"
               >
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
                 {busy ? "Importing…" : "Import"}

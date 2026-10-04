@@ -16,7 +16,7 @@ Because GitHub Pages only serves static files, there is **no server**. All auth 
 
 - **Login** is gated by Firebase Auth. Signed-out users see a login screen.
 - **Data** lives in Firestore collections `meals` and `dishes`. Reads and writes go directly from the browser, secured by Firestore Security Rules.
-- **Daily menus** are fetched from Penn State during the scheduled GitHub Pages build and published as static JSON alongside the site. The job runs daily at 12:00 UTC (7:00 AM Eastern in standard time, 8:00 AM during daylight time); GitHub may delay scheduled runs.
+- **Daily menus** are fetched from Penn State during the scheduled GitHub Pages build and published as static JSON alongside the site. The job runs daily at 12:17 UTC (7:17 AM Eastern in standard time, 8:17 AM during daylight time); GitHub may delay or skip scheduled runs.
 - The Firebase web config keys are **public identifiers, not secrets** — they're safe to ship in the bundle. Security is enforced by Auth + Rules.
 - **Demo Mode:** if no Firebase config is present, the app skips login and shows the bundled seed data so you can explore locally.
 

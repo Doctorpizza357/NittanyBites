@@ -156,6 +156,7 @@ async function fetchMenu(
 
 async function main(): Promise<void> {
   const date = getPennStateDate();
+  console.log(`Fetching Penn State menus for ${date.iso}`);
   const menus: DailyMenuSnapshot["menus"] = {
     Findlay: { Lunch: [], Dinner: [] },
     Warnock: { Lunch: [], Dinner: [] },

@@ -4,18 +4,17 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { useMeals } from "@/lib/useMeals";
-import { MealTimeline } from "@/components/MealTimeline";
 import { DailyMenu } from "@/components/DailyMenu";
 import { RankingsList } from "@/components/RankingsList";
 import { TrendChart } from "@/components/TrendChart";
 import { cn, round1 } from "@/lib/utils";
 
-type Tab = "Timeline" | "Menus" | "Rankings" | "Trends";
-const TABS: Tab[] = ["Timeline", "Menus", "Rankings", "Trends"];
+type Tab = "Menus" | "Rankings" | "Trends";
+const TABS: Tab[] = ["Menus", "Rankings", "Trends"];
 
 export default function DashboardPage() {
   const { meals, dishes, isLoading, error } = useMeals();
-  const [tab, setTab] = useState<Tab>("Timeline");
+  const [tab, setTab] = useState<Tab>("Menus");
 
   const avg =
     meals.length > 0
@@ -88,7 +87,6 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
         >
-          {tab === "Timeline" && <MealTimeline meals={meals} dishes={dishes} />}
           {tab === "Menus" && <DailyMenu dishes={dishes} />}
           {tab === "Rankings" && <RankingsList dishes={dishes} />}
           {tab === "Trends" && <TrendChart meals={meals} />}

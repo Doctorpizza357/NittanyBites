@@ -3,11 +3,9 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Edit2,
-  List,
   Trash2,
   Loader2,
 } from "lucide-react";
@@ -64,7 +62,7 @@ export function MealTimeline({ meals, dishes }: Props) {
   const isOwner = isOwnerUid(user?.uid);
   const [loc, setLoc] = useState("All");
   const [mealType, setMealType] = useState("All");
-  const [view, setView] = useState<TimelineView>("calendar");
+  const [view] = useState<TimelineView>("list");
   const [selectedDate, setSelectedDate] = useState(todayKey);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const initial = new Date();
@@ -156,26 +154,10 @@ export function MealTimeline({ meals, dishes }: Props) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterGroup label="Filter by location" options={locationFilters} value={loc} onChange={setLoc} />
-          <span className="mx-1 hidden h-4 w-px bg-zinc-800 sm:block" />
-          <FilterGroup label="Filter by meal" options={MEAL_FILTERS} value={mealType} onChange={setMealType} />
-        </div>
-        <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900/50 p-0.5">
-          <ViewButton
-            active={view === "calendar"}
-            label="Calendar"
-            icon={<CalendarDays className="h-3.5 w-3.5" />}
-            onClick={() => setView("calendar")}
-          />
-          <ViewButton
-            active={view === "list"}
-            label="List"
-            icon={<List className="h-3.5 w-3.5" />}
-            onClick={() => setView("list")}
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterGroup label="Filter by location" options={locationFilters} value={loc} onChange={setLoc} />
+        <span className="mx-1 hidden h-4 w-px bg-zinc-800 sm:block" />
+        <FilterGroup label="Filter by meal" options={MEAL_FILTERS} value={mealType} onChange={setMealType} />
       </div>
 
       {filtered.length === 0 ? (
@@ -347,35 +329,6 @@ export function MealTimeline({ meals, dishes }: Props) {
         />
       )}
     </div>
-  );
-}
-
-function ViewButton({
-  active,
-  label,
-  icon,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      className={cn(
-        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-        active
-          ? "bg-blue-900/70 text-sky-100"
-          : "text-slate-400 hover:text-slate-100"
-      )}
-      aria-pressed={active}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import {
   AlertTriangle,
@@ -29,6 +29,17 @@ const LOCATIONS: { value: MenuLocation; label: string }[] = [
 ];
 const MEALS: MenuMeal[] = ["Lunch", "Dinner"];
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+function defaultMeal(): MenuMeal {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date())
+  );
+  return hour >= 14 ? "Dinner" : "Lunch";
+}
 
 async function fetchMenu(url: string): Promise<DailyMenuSnapshot> {
   const response = await fetch(url, { cache: "no-store" });
@@ -97,6 +108,9 @@ export function DailyMenu({ dishes = [] }: { dishes?: DishRating[] }) {
     fetchMenu,
     { refreshInterval: 60 * 60 * 1000, revalidateOnFocus: true }
   );
+  useEffect(() => {
+    setMeal(defaultMeal());
+  }, []);
 
   if (isLoading && !data) {
     return (

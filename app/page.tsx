@@ -89,7 +89,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.2 }}
         >
           {tab === "Timeline" && <MealTimeline meals={meals} dishes={dishes} />}
-          {tab === "Menus" && <DailyMenu />}
+          {tab === "Menus" && <DailyMenu dishes={dishes} />}
           {tab === "Rankings" && <RankingsList dishes={dishes} />}
           {tab === "Trends" && <TrendChart meals={meals} />}
         </motion.div>

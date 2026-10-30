@@ -192,6 +192,44 @@ export async function updateDish(
   await batch.commit();
 }
 
+/** Rename every review using one dish name so it is grouped with another name. */
+export async function mergeDishes(
+  uid: string,
+  sourceName: string,
+  targetName: string
+): Promise<number> {
+  const fb = getFirebase();
+  if (!fb) throw new Error("Firebase not configured");
+
+  const source = sourceName.trim();
+  const target = targetName.trim();
+  if (!source || !target || source.toLocaleLowerCase() === target.toLocaleLowerCase()) {
+    throw new Error("Choose two different dish names.");
+  }
+
+  const dishSnap = await getDocs(
+    query(collection(fb.db, DISHES_COLLECTION), where("ownerUid", "==", uid))
+  );
+  const matching = dishSnap.docs.filter((dishDoc) => {
+    const name = dishDoc.data().dish;
+    return typeof name === "string" && name.trim().toLocaleLowerCase() === source.toLocaleLowerCase();
+  });
+
+  let batch = writeBatch(fb.db);
+  let operations = 0;
+  for (const dishDoc of matching) {
+    batch.update(dishDoc.ref, { dish: target });
+    operations += 1;
+    if (operations === 500) {
+      await batch.commit();
+      batch = writeBatch(fb.db);
+      operations = 0;
+    }
+  }
+  if (operations > 0) await batch.commit();
+  return matching.length;
+}
+
 /** Append one meal + N dishes owned by `uid` in a single batch. */
 export async function addMealToFirestore(
   uid: string,

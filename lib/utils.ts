@@ -56,6 +56,15 @@ export function normalizeCommons(location: string): string {
   return location;
 }
 
+export function normalizeDishName(name: string): string {
+  return name
+    .toLocaleLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 /** Simplify a meal label into Lunch / Dinner / Brunch buckets. */
 export function normalizeMeal(meal: string): "Lunch" | "Dinner" | "Brunch" | "Other" {
   const m = meal.toLowerCase();

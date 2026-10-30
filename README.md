@@ -17,6 +17,8 @@ Because GitHub Pages only serves static files, there is **no server**. All auth 
 - **Login** is gated by Firebase Auth. Signed-out users see a login screen.
 - **Data** lives in Firestore collections `meals` and `dishes`. Reads and writes go directly from the browser, secured by Firestore Security Rules.
 - **Daily menus** are fetched from Penn State during the scheduled GitHub Pages build and published as static JSON alongside the site. The job runs daily at 12:17 UTC (7:17 AM Eastern in standard time, 8:17 AM during daylight time); GitHub may delay or skip scheduled runs.
+- **Archive** provides a searchable history of every logged meal and dish, with date, meal, and location filters.
+- **Menu history** is retained in `public/menu-history.json` as a cumulative list of names seen on fetched menus. This list is used to prevent dish merges into arbitrary names.
 - The Firebase web config keys are **public identifiers, not secrets** — they're safe to ship in the bundle. Security is enforced by Auth + Rules.
 - **Demo Mode:** if no Firebase config is present, the app skips login and shows the bundled seed data so you can explore locally.
 
@@ -30,6 +32,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). With no `.env.local` values, it runs in Demo Mode.
 Run `npm run fetch-menu` again whenever you want to refresh the local menu snapshot.
+The fetch command also updates the cumulative menu-name archive used by the Rankings merge tool.
 
 ## Firebase Setup
 

@@ -1,14 +1,16 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
   DailyMenuSnapshot,
   MenuCategory,
   MenuMeal,
 } from "../lib/types";
+import { normalizeDishName } from "../lib/utils";
 
 const MENU_URL =
   "https://www.absecom.psu.edu/menus/user-pages/daily-menu.cfm";
 const OUTPUT_PATH = join(process.cwd(), "public", "daily-menu.json");
+const HISTORY_PATH = join(process.cwd(), "public", "menu-history.json");
 const LOCATIONS = [
   {
     label: "Findlay",
@@ -185,6 +187,35 @@ async function main(): Promise<void> {
   };
   await mkdir(join(process.cwd(), "public"), { recursive: true });
   await writeFile(OUTPUT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+  let existingNames: string[] = [];
+  try {
+    const history = JSON.parse(await readFile(HISTORY_PATH, "utf8")) as { names?: unknown };
+    if (Array.isArray(history.names)) {
+      existingNames = history.names.filter((name): name is string => typeof name === "string");
+    }
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error
+      ? error.code
+      : undefined;
+    if (code !== "ENOENT") throw error;
+  }
+  const currentNames = Object.values(menus).flatMap((meals) =>
+    Object.values(meals).flatMap((categories) =>
+      categories.flatMap((category) => category.items.map((item) => item.name))
+    )
+  );
+  const namesByKey = new Map<string, string>();
+  for (const name of [...existingNames, ...currentNames]) {
+    const trimmed = name.trim();
+    const key = normalizeDishName(trimmed);
+    if (key && !namesByKey.has(key)) namesByKey.set(key, trimmed);
+  }
+  const names = Array.from(namesByKey.values()).sort((a, b) => a.localeCompare(b));
+  await writeFile(
+    HISTORY_PATH,
+    `${JSON.stringify({ updatedAt: snapshot.updatedAt, names }, null, 2)}\n`,
+    "utf8"
+  );
   console.log(`Wrote ${OUTPUT_PATH}`);
 }
 

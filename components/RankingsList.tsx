@@ -1,16 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import useSWR from "swr";
 import { motion } from "framer-motion";
-import { Edit2, Loader2, Search, Trash2 } from "lucide-react";
-import type { DishRating } from "@/lib/types";
-import { cn, normalizeCommons, scoreAccent } from "@/lib/utils";
+import { Edit2, GitMerge, Loader2, Search, Trash2 } from "lucide-react";
+import type { DishRating, MenuHistory } from "@/lib/types";
+import { cn, normalizeCommons, normalizeDishName, scoreAccent } from "@/lib/utils";
 import { deleteDish } from "@/lib/firestore";
 import { useAuth } from "./AuthProvider";
 import { useMeals } from "@/lib/useMeals";
 import { useToast } from "./Toast";
 import { isOwnerUid } from "@/lib/firebase";
 import { EditDishModal } from "./EditDishModal";
+import { MergeDishesModal } from "./MergeDishesModal";
 
 const RANK_COLOR = ["text-amber-300", "text-zinc-300", "text-orange-400"];
 
@@ -31,9 +33,34 @@ export function RankingsList({ dishes }: { dishes: DishRating[] }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All categories");
   const [location, setLocation] = useState("All locations");
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const { data: menuHistory } = useSWR<MenuHistory>("/menu-history.json", (url: string) =>
+    fetch(url, { cache: "no-store" }).then((response) => {
+      if (!response.ok) throw new Error(`Menu history request failed (${response.status}).`);
+      return response.json() as Promise<MenuHistory>;
+    })
+  );
   const isOwner = isOwnerUid(user?.uid);
   const categories = Array.from(new Set(dishes.map((dish) => dish.category).filter(Boolean))).sort();
   const locations = Array.from(new Set(dishes.map((dish) => normalizeCommons(dish.location)))).sort();
+  const dishNames = useMemo(() => {
+    const unique = new Map<string, string>();
+    for (const dish of dishes) {
+      const trimmed = dish.dish.trim();
+      const key = normalizeDishName(trimmed);
+      if (key && !unique.has(key)) unique.set(key, trimmed);
+    }
+    return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
+  }, [dishes]);
+  const menuNames = useMemo(() => {
+    const unique = new Map<string, string>();
+    for (const name of menuHistory?.names ?? []) {
+      const trimmed = name.trim();
+      const key = normalizeDishName(trimmed);
+      if (key && !unique.has(key)) unique.set(key, trimmed);
+    }
+    return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
+  }, [menuHistory]);
   const ranked = useMemo(() => {
     const matching = dishes.filter((dish) =>
       dish.dish.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()) &&
@@ -84,7 +111,7 @@ export function RankingsList({ dishes }: { dishes: DishRating[] }) {
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-2 sm:grid-cols-[minmax(12rem,1fr)_auto_auto]">
+      <div className="grid gap-2 sm:grid-cols-[minmax(12rem,1fr)_auto_auto_auto]">
         <label className="relative block">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
           <input aria-label="Search dishes" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search dishes" className="w-full rounded-lg border border-zinc-800 bg-zinc-950 py-2 pl-9 pr-3 text-base text-zinc-100 outline-none focus:border-zinc-600 sm:text-sm" />
@@ -97,6 +124,11 @@ export function RankingsList({ dishes }: { dishes: DishRating[] }) {
           <option>All locations</option>
           {locations.map((option) => <option key={option}>{option}</option>)}
         </select>
+        {isOwner && dishNames.length > 0 && menuNames.length > 0 && (
+          <button onClick={() => setMergeOpen(true)} className="flex items-center justify-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-300 hover:border-zinc-600 hover:text-zinc-100">
+            <GitMerge className="h-4 w-4" /> Merge names
+          </button>
+        )}
       </div>
       {ranked.length === 0 ? <div className="surface p-8 text-center text-sm text-zinc-500">No dishes match these filters.</div> : ranked.map((entry, i) => {
         const d = entry.dish;
@@ -150,6 +182,7 @@ export function RankingsList({ dishes }: { dishes: DishRating[] }) {
         </motion.div>
       ); })}
       <EditDishModal dish={editing} onClose={() => setEditing(null)} />
+      <MergeDishesModal sourceNames={dishNames} targetNames={menuNames} open={mergeOpen} onClose={() => setMergeOpen(false)} />
     </div>
   );
 }

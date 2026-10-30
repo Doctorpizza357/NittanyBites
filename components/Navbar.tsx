@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Upload, Download, LogOut, LogIn, UtensilsCrossed } from "lucide-react";
+import { Plus, Upload, Download, LogOut, LogIn, UtensilsCrossed, Archive } from "lucide-react";
 import { LogMealModal } from "./LogMealModal";
 import { ImportModal } from "./ImportModal";
 import { useAuth } from "./AuthProvider";
@@ -61,6 +61,14 @@ export function Navbar() {
           </Link>
 
           <div className="flex items-center gap-1.5">
+            <Link
+              href="/archive"
+              title="Search the meal archive"
+              className="flex items-center gap-1.5 rounded-lg border border-zinc-800 px-3 py-1.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-100"
+            >
+              <Archive className="h-4 w-4" />
+              <span className="hidden sm:inline">Archive</span>
+            </Link>
             {isOwner ? (
               <>
                 <button

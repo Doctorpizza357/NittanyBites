@@ -120,3 +120,8 @@ export interface DailyMenuSnapshot {
   sourceUrl: string;
   menus: Record<MenuLocation, Record<MenuMeal, MenuCategory[]>>;
 }
+
+export interface MenuHistory {
+  updatedAt: string;
+  names: string[];
+}

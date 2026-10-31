@@ -172,7 +172,7 @@ export default function ArchivePage() {
                   </div>
                   <h2 className="mt-1 text-base font-semibold text-zinc-100">{meal.meal}</h2>
                 </div>
-                <span className={cn("rounded-md border px-2 py-1 font-mono text-sm font-semibold", scoreAccent(meal.rating))}>
+                <span className={cn("rounded-md border px-2 py-1 font-mono text-sm font-semibold", scoreAccent(meal.rating), "bg-transparent")}>
                   {meal.rating.toFixed(1)}
                 </span>
               </div>
@@ -187,7 +187,7 @@ export default function ArchivePage() {
                             <h3 className="text-sm font-medium text-zinc-200">{dish.dish}</h3>
                             <p className="mt-0.5 text-xs text-zinc-600">{dish.category} · {dish.sentiment}</p>
                           </div>
-                          <span className={cn("font-mono text-xs font-semibold", scoreAccent(dish.rating))}>{dish.rating.toFixed(1)}</span>
+                          <span className={cn("font-mono text-xs font-semibold", scoreAccent(dish.rating), "bg-transparent")}>{dish.rating.toFixed(1)}</span>
                         </div>
                         {dish.notes && <p className="mt-2 text-xs leading-relaxed text-zinc-500">{dish.notes}</p>}
                       </div>

@@ -1,10 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, Search, SlidersHorizontal } from "lucide-react";
-import type { DishRating } from "@/lib/types";
+import { CalendarDays, Loader2, MoreVertical, Search, SlidersHorizontal } from "lucide-react";
+import type { DishRating, MealLog } from "@/lib/types";
 import { cn, normalizeCommons, normalizeMeal, scoreAccent } from "@/lib/utils";
 import { useMeals } from "@/lib/useMeals";
+import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/components/Toast";
+import { isOwnerUid } from "@/lib/firebase";
+import { deleteMeal } from "@/lib/firestore";
+import { LogMealModal } from "@/components/LogMealModal";
 
 function formatDate(value: string): string {
   const date = new Date(`${value}T00:00:00`);
@@ -22,13 +27,19 @@ function matchesSearch(value: string, search: string): boolean {
 }
 
 export default function ArchivePage() {
-  const { meals, dishes, isLoading, error } = useMeals();
+  const { meals, dishes, isLoading, error, mutate } = useMeals();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isOwner = isOwnerUid(user?.uid);
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [mealType, setMealType] = useState("All");
   const [location, setLocation] = useState("All");
   const [showFilters, setShowFilters] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [editing, setEditing] = useState<MealLog | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const locations = useMemo(
     () => Array.from(new Set(meals.map((meal) => normalizeCommons(meal.location)))).sort(),
@@ -80,6 +91,28 @@ export default function ArchivePage() {
     setToDate("");
     setMealType("All");
     setLocation("All");
+  };
+
+  const handleDelete = async (meal: MealLog, mealKey: string) => {
+    if (!user || !window.confirm(`Delete "${meal.meal} · ${meal.location}" on ${meal.date} and its dishes? This can't be undone.`)) {
+      return;
+    }
+    setDeletingId(mealKey);
+    setOpenMenu(null);
+    try {
+      await deleteMeal(user.uid, {
+        id: meal.id,
+        date: meal.date,
+        meal: meal.meal,
+        location: meal.location,
+      });
+      await mutate();
+      toast("Meal deleted.", "success");
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Delete failed.", "error");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -162,8 +195,10 @@ export default function ArchivePage() {
         <div className="surface p-10 text-center text-sm text-zinc-500">No archived meals match your search.</div>
       ) : (
         <div className="space-y-3">
-          {entries.map(({ meal, dishes: mealDishes }) => (
-            <article key={meal.id ?? `${meal.date}-${meal.meal}-${meal.location}`} className="surface overflow-hidden">
+          {entries.map(({ meal, dishes: mealDishes }) => {
+            const mealKey = meal.id ?? `${meal.date}-${meal.meal}-${meal.location}`;
+            return (
+            <article key={mealKey} className="surface overflow-hidden">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 p-4">
                 <div>
                   <div className="flex items-center gap-2 text-xs text-zinc-500">
@@ -172,9 +207,42 @@ export default function ArchivePage() {
                   </div>
                   <h2 className="mt-1 text-base font-semibold text-zinc-100">{meal.meal}</h2>
                 </div>
-                <span className={cn("rounded-md border px-2 py-1 font-mono text-sm font-semibold", scoreAccent(meal.rating), "bg-transparent")}>
-                  {meal.rating.toFixed(1)}
-                </span>
+                <div className="flex items-start gap-2">
+                  <span className={cn("rounded-md border px-2 py-1 font-mono text-sm font-semibold", scoreAccent(meal.rating), "bg-transparent")}>
+                    {meal.rating.toFixed(1)}
+                  </span>
+                  {isOwner && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setOpenMenu((current) => current === mealKey ? null : mealKey)}
+                        aria-label={`Actions for ${meal.meal} on ${meal.date}`}
+                        aria-expanded={openMenu === mealKey}
+                        className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100"
+                      >
+                        {deletingId === mealKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                      </button>
+                      {openMenu === mealKey && deletingId !== mealKey && (
+                        <div className="absolute right-0 top-full z-10 mt-1 min-w-32 rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-xl">
+                          <button
+                            type="button"
+                            onClick={() => { setEditing(meal); setOpenMenu(null); }}
+                            className="block w-full rounded-md px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                          >
+                            Edit meal
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(meal, mealKey)}
+                            className="block w-full rounded-md px-3 py-2 text-left text-sm text-rose-400 hover:bg-rose-500/10"
+                          >
+                            Delete meal
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="p-4">
                 {meal.notes && <p className="mb-3 text-sm leading-relaxed text-zinc-400">{meal.notes}</p>}
@@ -198,8 +266,22 @@ export default function ArchivePage() {
                 )}
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
+      )}
+      {isOwner && editing && (
+        <LogMealModal
+          open={Boolean(editing)}
+          onClose={() => setEditing(null)}
+          editing={{
+            meal: editing,
+            dishes: dishes.filter(
+              (dish) => Boolean(editing.id && dish.mealId === editing.id) ||
+                (!dish.mealId && dish.date === editing.date && dish.meal === editing.meal && dish.location === editing.location)
+            ),
+          }}
+        />
       )}
       <style jsx global>{`.archive-input { width: 100%; border-radius: 0.6rem; border: 1px solid #27272a; background-color: #09090b; padding: 0.55rem 0.75rem; font-size: 0.875rem; color: #f4f4f5; outline: none; } .archive-input:focus { border-color: #52525b; box-shadow: 0 0 0 1px #3f3f46; }`}</style>
     </div>
